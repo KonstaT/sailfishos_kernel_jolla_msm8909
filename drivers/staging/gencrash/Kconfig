@@ -1,0 +1,4 @@
+config GEN_CRASH
+	tristate "Crash generator"
+	help
+		This enables crash generator.

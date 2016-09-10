@@ -653,7 +653,8 @@ static void msm_mpm_work_fn(struct work_struct *work)
 	unsigned long flags;
 	while (1) {
 		bool allow;
-		wait_for_completion(&wake_wq);
+		if (wait_for_completion_interruptible(&wake_wq))
+			continue;
 		spin_lock_irqsave(&msm_mpm_lock, flags);
 		allow = msm_mpm_irqs_detectable(true) &&
 				msm_mpm_gpio_irqs_detectable(true);
@@ -948,7 +949,7 @@ int __init msm_mpm_device_init(void)
 {
 	return platform_driver_register(&msm_mpm_dev_driver);
 }
-arch_initcall(msm_mpm_device_init);
+subsys_initcall(msm_mpm_device_init);
 
 void __init of_mpm_init(void)
 {

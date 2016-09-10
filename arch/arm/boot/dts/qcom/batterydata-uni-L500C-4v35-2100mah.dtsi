@@ -1,0 +1,123 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
+/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+
+qcom,qrd-skue-4v35-2100mah-data {
+	qcom,default-rbatt-mohm = <141>;
+	qcom,max-voltage-uv = <4350000>;
+	qcom,fcc-mah = <2100>;
+	qcom,rbatt-capacitive-mohm = <50>;
+	qcom,v-cutoff-uv = <3400000>;
+	qcom,chg-term-ua = <100000>;
+	qcom,batt-id-kohm = <110>;
+	qcom,flat-ocv-threshold-uv = <3800000>;
+	qcom,battery-type = "qrd_skue_4v35_2100mah";
+
+	qcom,fcc-temp-lut {
+		qcom,lut-col-legend = <(-20) 0 25 40 60>;
+		qcom,lut-data = <2208 2205 2204 2196 2185>;
+	};
+
+	qcom,pc-temp-ocv-lut {
+		qcom,lut-col-legend = <(-20) 0 25 40 60>;
+		qcom,lut-row-legend = <100 95 90 85 80>,
+				<75 70 65 60 55>,
+				<50 45 40 35 30>,
+				<25 20 16 13 11>,
+				<10 9 8 7 6>,
+				<5 4 3 2 1>,
+				<0>;
+		qcom,lut-data = 
+				<4342 4338 4334 4328 4320>,
+				<4222 4241 4244 4242 4237>,
+				<4150 4182 4184 4182 4177>,
+				<4084 4125 4128 4127 4121>,
+				<4032 4070 4078 4076 4069>,
+				<3940 4004 4028 4028 4020>,
+				<3898 3939 3974 3981 3977>,
+				<3864 3910 3940 3944 3938>,
+				<3831 3878 3894 3904 3899>,
+				<3804 3848 3856 3860 3857>,
+				<3786 3822 3828 3830 3824>,
+				<3774 3800 3808 3808 3804>,
+				<3764 3782 3791 3792 3786>,
+				<3752 3770 3778 3778 3774>,
+				<3742 3761 3768 3766 3754>,
+				<3729 3750 3757 3750 3732>,
+				<3713 3732 3742 3733 3714>,
+				<3696 3718 3720 3712 3692>,
+				<3682 3709 3700 3692 3672>,
+				<3666 3703 3690 3682 3670>,
+				<3658 3700 3688 3680 3668>,
+				<3648 3696 3688 3680 3666>,
+				<3634 3692 3686 3678 3663>,
+				<3619 3686 3684 3676 3651>,
+				<3600 3674 3676 3669 3626>,
+				<3576 3650 3650 3644 3591>,
+				<3543 3610 3604 3600 3544>,
+				<3499 3551 3544 3540 3482>,
+				<3426 3466 3461 3460 3398>,
+				<3304 3336 3331 3334 3277>,
+				<3025 3000 3000 3000 3000>;
+};
+
+	qcom,rbatt-sf-lut {
+		qcom,lut-col-legend = <(-20) 0 25 40 60>;
+		qcom,lut-row-legend = <100 95 90 85 80>,
+				<75 70 65 60 55>,
+				<50 45 40 35 30>,
+				<25 20 16 13 11>,
+				<10 9 8 7 6>,
+				<5 4 3 2 1>;
+		qcom,lut-data = 
+				<1091 233 100 84 78>,
+				<1091 233 100 84 78>,
+				<1075 243 103 85 79>,
+				<1048 250 107 87 80>,
+				<1043 248 113 91 83>,
+				<952 246 121 96 86>,
+				<950 230 129 101 89>,
+				<956 233 132 108 94>,
+				<957 232 118 109 98>,
+				<971 231 105 95 90>,
+				<1003 233 103 87 82>,
+				<1052 236 104 87 83>,
+				<1116 238 104 88 85>,
+				<1197 243 106 91 88>,
+				<1287 252 106 90 84>,
+				<1383 261 106 87 81>,
+				<1470 263 106 87 82>,
+				<1513 273 106 88 83>,
+				<1444 269 103 86 82>,
+				<1560 285 101 85 84>,
+				<1622 296 104 87 85>,
+				<1691 311 106 89 87>,
+				<1765 332 109 91 89>,
+				<1949 355 113 94 91>,
+				<2269 380 116 94 99>,
+				<2736 410 114 92 104>,
+				<3554 479 116 94 108>,
+				<4994 643 124 99 116>,
+				<8624 1006 142 107 135>,
+				<17248 2013 183 128 199>;
+	};
+
+	qcom,ibat-acc-lut {
+		qcom,lut-col-legend = <(-20) 0 25>;
+		qcom,lut-row-legend = <0 250 500 1000>;
+		qcom,lut-data = <2164 2172 2170>,
+				<834  2095 2130>,
+				<477  1986 2116>,
+				<62   1642 2085>;
+	};
+};

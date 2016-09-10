@@ -268,8 +268,9 @@ static struct sensors_classdev ps_cdev = {
 	.max_range = "7",
 	.resolution = "1.0",
 	.sensor_power = "0.25",
-	.min_delay = 10000,
-	.max_delay = 2000,
+	//wangjing@uni_drv modify for reduce the screen change time with Lsensor
+	.min_delay = 1000,
+	.max_delay = 200,
 	.fifo_reserved_event_count = 0,
 	.fifo_max_event_count = 0,
 	.flags = 3,
@@ -1304,7 +1305,8 @@ static int ltr553_ps_sync_delay(struct ltr553_data *ltr, unsigned int ps_delay)
 			index = i;
 		}
 	}
-
+	//wangjing@uni_drv modify for reduce the screen change time with Lsensor
+	index=0;
 	ltr->ps_measure_rate = index;
 	dev_dbg(&ltr->i2c->dev, "ps delay %d ms\n", ps_mrr_table[index]);
 

@@ -1,0 +1,99 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
+/* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&mdss_mdp {
+	dsi_st7701_fwvga_video: qcom,mdss_dsi_st7701_fwvga_video {
+		qcom,mdss-dsi-panel-name = "st7701 fwvga video mode dsi panel";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+		qcom,mdss-dsi-panel-type = "dsi_video_mode";
+		qcom,mdss-dsi-panel-destination = "display_1";
+		qcom,mdss-dsi-panel-framerate = <60>;
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-panel-width = <480>;
+		qcom,mdss-dsi-panel-height = <854>;
+		qcom,mdss-dsi-h-front-porch = <60>;
+		qcom,mdss-dsi-h-back-porch = <60>;
+		qcom,mdss-dsi-h-pulse-width = <20>;
+		qcom,mdss-dsi-h-sync-skew = <0>;
+		qcom,mdss-dsi-v-back-porch = <10>;
+		qcom,mdss-dsi-v-front-porch = <16>;
+		qcom,mdss-dsi-v-pulse-width = <4>;
+		qcom,mdss-dsi-h-left-border = <0>;
+		qcom,mdss-dsi-h-right-border = <0>;
+		qcom,mdss-dsi-v-top-border = <0>;
+		qcom,mdss-dsi-v-bottom-border = <0>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-color-order = "rgb_swap_rgb";
+		qcom,mdss-dsi-underflow-color = <0xff>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-on-command = [39 01 00 00 32 00 01 11
+			39 01 00 00 00 00 06FF7701000010
+			39 01 00 00 00 00 03C0E903
+			39 01 00 00 00 00 03C10C07
+			39 01 00 00 00 00 03C23708
+			39 01 00 00 00 00 11B040020811170B0709091B0716120E130F
+			39 01 00 00 00 00 11B14001080F15090409091C0915120E120F
+			39 01 00 00 00 00 06 FF 77 01 00 00 11
+			39 01 00 00 00 00 02 B0 4D
+			39 01 00 00 00 00 02 B1 78
+			39 01 00 00 00 00 02 B2 07
+			39 01 00 00 00 00 02 B3 80
+			39 01 00 00 00 00 02 B5 47
+			39 01 00 00 00 00 02 B7 8A
+			39 01 00 00 00 00 02 B8 20
+			39 01 00 00 00 00 02 BB 03
+			39 01 00 00 00 00 02 C1 78
+			39 01 00 00 00 00 02 C2 78
+			39 01 00 00 00 00 02 D0 88
+			39 01 00 00 00 00 04 E0 00 00 02
+			39 01 00 00 00 00 0c E1 06 00 00 00 05 00 00 00002020
+			39 01 00 00 00 00 0e E2 00 00 01 00 00 00 03 00 00 00 00 00 00
+			39 01 00 00 00 00 05 E3 00 00 33 33
+			39 01 00 00 00 00 03 E4 4444
+			39 01 00 00 00 00 11 E5 09 67 BE A0 0B 67BEA00567BEA00767BEA0
+			39 01 00 00 00 00 05 E6 00003333
+			39 01 00 00 00 00 03 E7 4444
+			39 01 00 00 00 00 11 E80867BEA00A67BEA00467BEA00667BEA0
+			39 01 00 00 00 00 11 EA10001000100010001000100010001000
+			39 01 00 00 00 00 08 EB02020000000000
+			39 01 00 00 00 00 03 EC0202
+			39 01 00 00 00 00 11 EDF5476F0B8F9FFFFFFFFFF9F8B0F6745F
+			39 01 00 00 00 00 0d EF 080808080808040404040404
+			39 01 00 00 00 00 06 FF 7701000000
+			39 01 00 00 78 00 01 29];
+		qcom,mdss-dsi-off-command = [05 01 00 00 32 00 02 28 00
+					05 01 00 00 78 00 02 10 00];
+		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+		qcom,mdss-dsi-off-command-state = "dsi_lp_mode";
+		qcom,mdss-dsi-h-sync-pulse = <1>;
+		qcom,mdss-dsi-traffic-mode = "burst_mode";
+		qcom,mdss-dsi-lane-map = "lane_map_0123";
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-panel-timings = [b8 0c 08 00 2a 2c 10 12 08 03 04 00];
+		qcom,mdss-dsi-t-clk-post = <0x1e>;
+		qcom,mdss-dsi-t-clk-pre = <0x38>;  
+		qcom,mdss-dsi-bl-min-level = <500>;
+		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
+		qcom,mdss-dsi-bl-pmic-pwm-frequency = <100>;
+		qcom,mdss-dsi-bl-pmic-bank-select = <0>;
+		qcom,mdss-dsi-pwm-gpio = <&pm8909_mpps 2 0>;
+		qcom,mdss-dsi-dma-trigger = "trigger_sw";
+		qcom,mdss-dsi-mdp-trigger = "none"; 
+		qcom,mdss-dsi-reset-sequence = <1 20>, <0 2>, <1 120>;
+	};
+};

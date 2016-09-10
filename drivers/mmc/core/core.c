@@ -1,3 +1,5 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
+
 /*
  *  linux/drivers/mmc/core/core.c
  *
@@ -3259,12 +3261,14 @@ static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 		mmc_hostname(host), __func__, host->f_init);
 #endif
 	mmc_power_up(host);
+	mmc_delay(100);//kangyan@uni_drv add delay for sdcard can't be found sometimes
 
 	/*
 	 * Some eMMCs (with VCCQ always on) may not be reset after power up, so
 	 * do a hardware reset if possible.
 	 */
 	mmc_hw_reset_for_init(host);
+	mmc_delay(20);//kangyan@uni_drv add delay for sdcard can't be found sometimes
 
 	/*
 	 * sdio_reset sends CMD52 to reset card.  Since we do not know
@@ -3272,6 +3276,7 @@ static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 	 * should be ignored by SD/eMMC cards.
 	 */
 	sdio_reset(host);
+	mmc_delay(100);//kangyan@uni_drv add delay for sdcard can't be found sometimes
 	mmc_go_idle(host);
 
 	mmc_send_if_cond(host, host->ocr_avail);

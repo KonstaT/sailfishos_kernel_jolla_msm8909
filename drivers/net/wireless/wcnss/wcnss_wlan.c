@@ -78,6 +78,9 @@ static int do_not_cancel_vote = WCNSS_CONFIG_UNSPECIFIED;
 module_param(do_not_cancel_vote, int, S_IWUSR | S_IRUGO);
 MODULE_PARM_DESC(do_not_cancel_vote, "Do not cancel votes for wcnss");
 
+static int wlan_smd_ready = 0;
+module_param(wlan_smd_ready, int, S_IWUSR | S_IRUGO);
+
 static DEFINE_SPINLOCK(reg_spinlock);
 
 #define RIVA_SPARE_OFFSET		0x0b4
@@ -1412,8 +1415,10 @@ wcnss_wlan_ctrl_probe(struct platform_device *pdev)
 static int
 wcnss_wlan_ctrl_remove(struct platform_device *pdev)
 {
-	if (penv)
+	if (penv) {
 		penv->smd_channel_ready = 0;
+		wlan_smd_ready = 0;
+	}
 
 	pr_info("%s: SMD ctrl channel down\n", __func__);
 
@@ -2208,6 +2213,7 @@ static void wcnssctrl_rx_handler(struct work_struct *worker)
 		if (fw_status != WAIT_FOR_CBC_IND)
 			penv->is_cbc_done = 1;
 		wcnss_setup_vbat_monitoring();
+		wlan_smd_ready = 1;
 		break;
 
 	case WCNSS_CALDATA_DNLD_RSP:

@@ -1,3 +1,4 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /*
  * MPU3050 Tri-axis gyroscope driver
  *
@@ -138,7 +139,7 @@ static struct sensors_classdev sensors_cdev = {
 	.handle = SENSORS_GYROSCOPE_HANDLE,
 	.type = SENSOR_TYPE_GYROSCOPE,
 	.max_range = "35.0",
-	.resolution = "0.06",
+	.resolution = "0.005",    //liguowei@uniscope.com 20141021 googlecamera apk
 	.sensor_power = "0.2",
 	.min_delay = 2000,
 	.fifo_reserved_event_count = 0,
@@ -474,8 +475,8 @@ static void mpu3050_read_xyz(struct i2c_client *client,
 	u16 buffer[3];
 
 	mpu3050_xyz_read_reg(client, (u8 *)buffer, 6);
-	coords->x = be16_to_cpu(buffer[0]);
-	coords->y = be16_to_cpu(buffer[1]);
+	coords->x =-be16_to_cpu(buffer[0]);  //liguowei@uniscope.com 20141021 googlecamera apk
+	coords->y =-be16_to_cpu(buffer[1]);  //liguowei@uniscope.com 20141021 googlecamera apk
 	coords->z = be16_to_cpu(buffer[2]);
 	dev_dbg(&client->dev, "%s: x %d, y %d, z %d\n", __func__,
 					coords->x, coords->y, coords->z);
@@ -665,7 +666,7 @@ static int mpu3050_probe(struct i2c_client *client,
 	u32 i;
 
 	sensor = kzalloc(sizeof(struct mpu3050_sensor), GFP_KERNEL);
-	idev = devm_input_allocate_device(&client->dev);
+	idev = input_allocate_device();
 	if (!sensor || !idev) {
 		dev_err(&client->dev, "failed to allocate driver data\n");
 		error = -ENOMEM;
@@ -714,7 +715,7 @@ static int mpu3050_probe(struct i2c_client *client,
 	sensor->cdev.delay_msec = sensor->poll_interval;
 	sensor->cdev.sensors_enable = mpu3050_enable_set;
 	sensor->cdev.sensors_poll_delay = mpu3050_poll_delay_set;
-	ret = sensors_classdev_register(&sensor->idev->dev, &sensor->cdev);
+	ret = sensors_classdev_register(&client->dev, &sensor->cdev);
 
 	if (ret) {
 		dev_err(&client->dev, "class device create failed: %d\n", ret);
@@ -821,7 +822,7 @@ static int mpu3050_probe(struct i2c_client *client,
 	error = create_sysfs_interfaces(&idev->dev);
 	if (error < 0) {
 		dev_err(&client->dev, "failed to create sysfs\n");
-		goto err_free_irq;
+		goto err_input_cleanup;
 	}
 
 	pm_runtime_enable(&client->dev);
@@ -829,6 +830,8 @@ static int mpu3050_probe(struct i2c_client *client,
 
 	return 0;
 
+err_input_cleanup:
+	input_unregister_device(idev);
 err_free_irq:
 	if (client->irq > 0)
 		free_irq(client->irq, sensor);
@@ -841,6 +844,7 @@ err_pm_set_suspended:
 err_class_sysfs:
 	sensors_classdev_unregister(&sensor->cdev);
 err_free_mem:
+	input_free_device(idev);
 	kfree(sensor);
 	return error;
 }
@@ -864,6 +868,7 @@ static int mpu3050_remove(struct i2c_client *client)
 	remove_sysfs_interfaces(&client->dev);
 	if (gpio_is_valid(sensor->enable_gpio))
 		gpio_free(sensor->enable_gpio);
+	input_unregister_device(sensor->idev);
 
 	kfree(sensor);
 

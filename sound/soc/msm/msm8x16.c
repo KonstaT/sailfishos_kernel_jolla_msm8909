@@ -1,3 +1,4 @@
+ /**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
  /* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1337,7 +1338,12 @@ static void *def_msm8x16_wcd_mbhc_cal(void)
 	}
 
 #define S(X, Y) ((WCD_MBHC_CAL_PLUG_TYPE_PTR(msm8x16_wcd_cal)->X) = (Y))
+	//kangyan@uni_drv 20151030 modify for headset detect slowly
+	#if defined UNISCOPE_DRIVER_L510
+	S(v_hs_max, 1600);//1500 	
+	#else
 	S(v_hs_max, 1500);
+	#endif
 #undef S
 #define S(X, Y) ((WCD_MBHC_CAL_BTN_DET_PTR(msm8x16_wcd_cal)->X) = (Y))
 	S(num_btn, WCD_MBHC_DEF_BUTTONS);
@@ -2550,6 +2556,8 @@ static int msm8x16_asoc_machine_probe(struct platform_device *pdev)
 	const char *ext_pa_str = NULL;
 	int num_strings;
 	int ret, id, i;
+	//kangyan@uni_drv add for probe external pa gpio
+	int error;
 
 	pdata = devm_kzalloc(&pdev->dev,
 			sizeof(struct msm8916_asoc_mach_data), GFP_KERNEL);
@@ -2619,7 +2627,21 @@ static int msm8x16_asoc_machine_probe(struct platform_device *pdev)
 			return -EINVAL;
 		}
 	}
-
+//kangyan@uni_drv add for probe external pa gpio
+#if defined UNISCOPE_DRIVER_QC8909
+	if (gpio_is_valid(pdata->spk_ext_pa_gpio)) {
+		error=gpio_request(pdata->spk_ext_pa_gpio, "spk_ext_pa_gpio");
+		if(error)
+		{
+			pr_err("kangyan %s: gpio98 request fail",__func__);
+		}
+		error=gpio_direction_output(pdata->spk_ext_pa_gpio, 0);
+		if(error)
+		{
+			pr_err("kangyan %s: gpio98 dir set output fail",__func__);
+		}
+	}
+#endif
 	ret = of_property_read_string(pdev->dev.of_node, codec_type, &ptr);
 	if (ret) {
 		dev_err(&pdev->dev,

@@ -1,3 +1,4 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /* Copyright (c) 2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -56,6 +57,10 @@ static struct attribute_group vkey_grp = {
 	.attrs = vkey_attr,
 };
 
+/* Added by JZZ(zhizhang)@uniscope_drv 20140918 */
+#if defined(UNISCOPE_DRIVER_TP_AUTOMATCH_RESOLUTION)
+extern void get_mdss_dsi_panel_resolution(u32 *x, u32 *y);
+#endif
 static int vkey_parse_dt(struct device *dev,
 			struct vkeys_platform_data *pdata)
 {
@@ -92,6 +97,20 @@ static int vkey_parse_dt(struct device *dev,
 		dev_err(dev, "Failed to read panel max y\n");
 		return -EINVAL;
 	}
+
+/* Added by JZZ(zhizhang)@uniscope_drv 20140918 begin */
+#if defined(UNISCOPE_DRIVER_TP_AUTOMATCH_RESOLUTION)
+	{
+		u32 disp_x=0;
+		u32 disp_y=0;
+		get_mdss_dsi_panel_resolution(&disp_x,&disp_y);
+		pdata->disp_maxx = disp_x;
+		pdata->disp_maxy = disp_y;
+		pdata->panel_maxx = disp_x;
+		pdata->panel_maxy = disp_y + 100;	
+	}
+#endif
+/* Added by JZZ(zhizhang)@uniscope_drv 20140918 end */
 
 	prop = of_find_property(np, "qcom,key-codes", NULL);
 	if (prop) {

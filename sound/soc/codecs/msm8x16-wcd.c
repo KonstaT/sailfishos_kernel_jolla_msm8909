@@ -1,3 +1,4 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -3273,6 +3274,12 @@ static const struct snd_soc_dapm_route audio_map[] = {
 	{"MIC BIAS Internal2", NULL, "MICBIAS_REGULATOR"},
 	{"MIC BIAS External", NULL, "MICBIAS_REGULATOR"},
 	{"MIC BIAS External2", NULL, "MICBIAS_REGULATOR"},
+	/* JZZ(zhizhang)@uniscope_drv for secondary mic can not get 
+	 * bias voltage when only using secondary mic & configue 
+	 * secondary mic bias voltage with MIC BIAS Internal3 20140731 */
+	{"MIC BIAS Internal3", NULL, "INT_LDO_H"},
+	{"MIC BIAS Internal3", NULL, "MICBIAS_REGULATOR"},
+
 };
 
 static int msm8x16_wcd_startup(struct snd_pcm_substream *substream,

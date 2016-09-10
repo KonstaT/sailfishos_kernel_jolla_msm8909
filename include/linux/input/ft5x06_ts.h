@@ -1,3 +1,4 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /*
  *
  * FocalTech ft5x06 TouchScreen driver header file.
@@ -18,6 +19,8 @@
 #ifndef __LINUX_FT5X06_TS_H__
 #define __LINUX_FT5X06_TS_H__
 
+//#define TPD_AUTO_UPGRADE   //liguowei@uniscope.com 20141208 force update TP FW
+
 #define FT5X06_ID		0x55
 #define FT5X16_ID		0x0A
 #define FT5X36_ID		0x14
@@ -34,22 +37,6 @@ struct fw_upgrade_info {
 	u16 delay_erase_flash;
 };
 
-struct ft5x06_psensor_platform_data {
-	struct input_dev *input_psensor_dev;
-	struct sensors_classdev ps_cdev;
-	int tp_psensor_opened;
-	char tp_psensor_data; /* 0 near, 1 far */
-	struct ft5x06_ts_data *data;
-};
-
-struct ft5x06_gesture_platform_data {
-	int gesture_enable_to_set;	/* enable/disable gesture */
-	int in_pocket;	/* whether in pocket mode or not */
-	struct device *dev;
-	struct class *gesture_class;
-	struct ft5x06_ts_data *data;
-};
-
 struct ft5x06_ts_platform_data {
 	struct fw_upgrade_info info;
 	const char *name;
@@ -59,6 +46,18 @@ struct ft5x06_ts_platform_data {
 	u32 irq_gpio_flags;
 	u32 reset_gpio;
 	u32 reset_gpio_flags;
+#ifdef UNISCOPE_DRIVER_DTV //liguowei@uniscope 20140722 support siano dtv
+   u32 wlt_gpio;
+	u32 wlt_gpio_flags;
+ u32 vcc18_gpio;
+	u32 vcc18_gpio_flags;
+ u32 vccio_gpio;
+	u32 vccio_gpio_flags;
+ u32 dtvreset_gpio;
+	u32 dtvreset_gpio_flags;
+ u32 dtvinterrupt_gpio;
+	u32 dtvinterrupt_gpio_flags;	
+#endif	
 	u32 family_id;
 	u32 x_max;
 	u32 y_max;
@@ -76,10 +75,27 @@ struct ft5x06_ts_platform_data {
 	bool no_force_update;
 	bool i2c_pull_up;
 	bool ignore_id_check;
-	bool psensor_support;
-	bool gesture_support;
+#ifndef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20140703
 	int (*power_init) (bool);
 	int (*power_on) (bool);
+#endif
 };
 
+/*kangyan@uniscope_drv 20141125 add tp auto upgrade begin*/
+#if defined TPD_AUTO_UPGRADE
+struct Upgrade_Info
+{
+    u8 CHIP_ID;
+    u8 FTS_NAME[20];
+    u8 TPD_MAX_POINTS;
+    u8 AUTO_CLB;
+    u16 delay_aa;       /*delay of write FT_UPGRADE_AA */
+    u16 delay_55;       /*delay of write FT_UPGRADE_55 */
+    u8 upgrade_id_1;    /*upgrade id 1 */
+    u8 upgrade_id_2;    /*upgrade id 2 */
+    u16 delay_readid;   /*delay of read id */
+    u16 delay_earse_flash; /*delay of earse flash*/
+};
+#endif
+/*kangyan@uniscope_drv 20141125 add tp auto upgrade end*/
 #endif

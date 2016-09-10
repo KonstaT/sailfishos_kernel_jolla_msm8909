@@ -1,4 +1,5 @@
 #
+#**********uniscope-driver-modify-file-on-qualcomm-platform*****************#
 # Input misc drivers configuration
 #
 menuconfig INPUT_MISC
@@ -786,6 +787,26 @@ config SENSORS_AKM8963
 	  To compile this driver as a module, choose M here: the
 	  module will be called akm8963.
 
+#kangyan@uniscope_drv add QMC7983 sensor 20150511
+config SENSORS_QMC7983
+	tristate "QMC7983 3-axis magnetic sensor driver"
+	depends on I2C
+	help
+	  Say Y here if you want to enable the QMC7983 magnetic sensor
+	  driver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called qmc7983.
+
+config QPNP_VIBRA_FFMEMLESS
+	tristate "Qualcomm Plug'n'play PMIC ffmemless vibrator driver"
+	depends on SPMI && !QPNP_VIBRATOR
+	select INPUT_FF_MEMLESS
+	default n
+	help
+	  Say Y here if you want to enable Qualcomm Plug'n'play PMIC ffmemless
+	  vibrator driver.
+
 config SENSORS_STK3X1X
 	tristate "STK3X1X device driver"
 	depends on I2C
@@ -849,6 +870,14 @@ config SENSORS_BMI058
 	help
 	 If you say yes here, you get support for Bosch Sensortec's
 	 sensor driver of BMI058.
+
+#JZZ(zhizhang)@uniscope_drv add MXC400X sensor 20150409
+config SENSORS_MXC400X
+	tristate "MXC400X acceleration sensor support"
+	depends on I2C
+	help
+	  If you say yes here, you get support for Bosch Sensortec's
+	  acceleration sensors MXC400X.
 
 endif
 

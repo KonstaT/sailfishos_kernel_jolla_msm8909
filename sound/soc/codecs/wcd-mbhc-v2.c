@@ -1,3 +1,4 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -45,9 +46,18 @@
 				  SND_JACK_BTN_2 | SND_JACK_BTN_3 | \
 				  SND_JACK_BTN_4)
 #define OCP_ATTEMPT 1
+//kangyan@uni_drv 20151030 modify for headset detect slowly
+#if defined UNISCOPE_DRIVER_L510
+#define HS_DETECT_PLUG_TIME_MS (2 * 1000)
+#define SPECIAL_HS_DETECT_TIME_MS (800)
+#define MBHC_BUTTON_PRESS_THRESHOLD_MIN 500
+#else
 #define HS_DETECT_PLUG_TIME_MS (3 * 1000)
 #define SPECIAL_HS_DETECT_TIME_MS (2 * 1000)
 #define MBHC_BUTTON_PRESS_THRESHOLD_MIN 250
+#endif
+
+
 #define GND_MIC_SWAP_THRESHOLD 4
 #define WCD_FAKE_REMOVAL_MIN_PERIOD_MS 100
 #define HS_VREF_MIN_VAL 1400
@@ -1089,8 +1099,13 @@ static void wcd_correct_swch_plug(struct work_struct *work)
 
 		if (result2 == 1) {
 			pr_debug("%s: cable is extension cable\n", __func__);
+			#if defined UNISCOPE_DRIVER_L510
+			plug_type = MBHC_PLUG_TYPE_HEADSET;
+			wrk_complete = false;
+			#else
 			plug_type = MBHC_PLUG_TYPE_HIGH_HPH;
 			wrk_complete = true;
+			#endif
 		} else {
 			pr_debug("%s: cable might be headset: %d\n", __func__,
 					plug_type);
@@ -1222,8 +1237,13 @@ static void wcd_mbhc_detect_plug_type(struct wcd_mbhc *mbhc)
 
 		if (!result1 && !(result2 & 0x01))
 			plug_type = MBHC_PLUG_TYPE_HEADSET;
-		else if (!result1 && (result2 & 0x01))
+		else if (!result1 && (result2 & 0x01)){
+			#if defined UNISCOPE_DRIVER_L510
+			plug_type = MBHC_PLUG_TYPE_HEADSET;
+			#else
 			plug_type = MBHC_PLUG_TYPE_HIGH_HPH;
+			#endif
+		}
 		else {
 			plug_type = MBHC_PLUG_TYPE_INVALID;
 			goto exit;
@@ -1239,8 +1259,14 @@ static void wcd_mbhc_detect_plug_type(struct wcd_mbhc *mbhc)
 exit:
 	pr_debug("%s: Valid plug found, plug type is %d\n",
 			 __func__, plug_type);
+	#if defined UNISCOPE_DRIVER_L510
+	if (plug_type == MBHC_PLUG_TYPE_HEADSET ||
+			plug_type == MBHC_PLUG_TYPE_HEADPHONE||
+			plug_type == MBHC_PLUG_TYPE_HIGH_HPH) {
+	#else
 	if (plug_type == MBHC_PLUG_TYPE_HEADSET ||
 			plug_type == MBHC_PLUG_TYPE_HEADPHONE) {
+	#endif
 		wcd_mbhc_find_plug_and_report(mbhc, plug_type);
 		wcd_schedule_hs_detect_plug(mbhc, &mbhc->correct_plug_swch);
 	} else {

@@ -1,3 +1,4 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -193,7 +194,7 @@
 		};
 
 		vdd_spkdrv {
-			qcom,pins = <&gp 4>;
+			qcom,pins = <&gp 98>;  /*kangyan@uni_drv modify GPIO4 to GPIO112 temporarily, to make uart log useful*/
 			qcom,num-grp-pins = <1>;
 			qcom,pin-func = <0>;
 			label = "vdd_spkdrv";
@@ -252,7 +253,7 @@
 		};
 
 		cdc-ext-mclk-lines {
-			qcom,pins = <&gp 98>;
+			qcom,pins = <&gp 99>; //98 //kangyan@uni_drv 20150319 enable spk 
 			qcom,num-grp-pins = <1>;
 			qcom,pin-func = <2>;
 			label = "cdc-ext-mclk-lines";
@@ -1205,7 +1206,20 @@
 				bias-pull-up;
 			};
 		};
-
+		
+		/* JZZ(zhizhang)@uniscope_drv 20150317 add keypad led control begin */
+		gpio_led_pins {
+			qcom,pins = <&gp 36>;
+			qcom,num-grp-pins = <1>;
+			label = "gpio-led-pins";
+			gpio_led_off: led_off {
+				drive-strength = <2>;
+				bias-disable;
+				output-low;
+			};
+		};
+		/* JZZ(zhizhang)@uniscope_drv 20150317 add keypad led control end */
+		
 		/* add pingrp for touchscreen */
 		pmx_ts_int_active {
 			qcom,pins = <&gp 13>;
@@ -1215,7 +1229,8 @@
 
 			ts_int_active: ts_int_active {
 				drive-strength = <8>;
-				bias-pull-up;
+				//bias-pull-up;
+				bias-disable;    /*zhangbing@uniscope_drv20151013 TP gt9157 interrupt voltage abnormal(lower than normal)*/
 			};
 		};
 
@@ -1227,7 +1242,8 @@
 
 			ts_int_suspend: ts_int_suspend {
 				drive-strength = <2>;
-				bias-pull-down;
+				//bias-pull-down;
+				bias-disable;   /*zhangbing@uniscope_drv20151013 TP gt9157 interrupt voltage abnormal(lower than normal)*/
 			};
 		};
 

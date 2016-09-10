@@ -82,6 +82,10 @@ void panic(const char *fmt, ...)
 	long i, i_next = 0;
 	int state = 0;
 
+#ifdef CONFIG_KMSG_DUMPER
+	kmsg_dump(KMSG_DUMP_PANIC);
+#endif
+
 	trace_kernel_panic(0);
 	/*
 	 * Disable local interrupts. This will prevent panic_smp_self_stop
@@ -132,7 +136,9 @@ void panic(const char *fmt, ...)
 	 */
 	smp_send_stop();
 
+#ifndef CONFIG_KMSG_DUMPER
 	kmsg_dump(KMSG_DUMP_PANIC);
+#endif
 
 	atomic_notifier_call_chain(&panic_notifier_list, 0, buf);
 

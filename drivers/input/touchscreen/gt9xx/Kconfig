@@ -1,3 +1,4 @@
+#**********uniscope-driver-modify-file-on-qualcomm-platform*****************#
 #
 # Goodix GT9xx Touchscreen driver
 #
@@ -21,7 +22,7 @@ config GT9XX_TOUCHPANEL_DRIVER
 config GT9XX_TOUCHPANEL_UPDATE
 	tristate "Goodix GT9xx touchpanel auto update support"
 	depends on GT9XX_TOUCHPANEL_DRIVER
-	default n
+	default y
 	help
 	  This enables support for firmware update for Goodix GT9xx
 	  touchscreens.
@@ -37,7 +38,7 @@ config GT9XX_TOUCHPANEL_UPDATE
 config GT9XX_TOUCHPANEL_DEBUG
 	tristate "Goodix GT9xx Tools for debuging"
 	depends on GT9XX_TOUCHPANEL_DRIVER
-	default n
+	default y
 	help
 	  This is application debug interface support for Goodix GT9xx
 	  touchscreens.

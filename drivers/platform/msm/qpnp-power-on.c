@@ -615,6 +615,8 @@ static irqreturn_t qpnp_kpdpwr_irq(int irq, void *_pon)
 	int rc;
 	struct qpnp_pon *pon = _pon;
 
+	dev_dbg(&pon->spmi->dev, "%s\n", __func__);
+
 	rc = qpnp_pon_input_dispatch(pon, PON_KPDPWR);
 	if (rc)
 		dev_err(&pon->spmi->dev, "Unable to send input event\n");
@@ -632,6 +634,8 @@ static irqreturn_t qpnp_resin_irq(int irq, void *_pon)
 	int rc;
 	struct qpnp_pon *pon = _pon;
 
+	dev_dbg(&pon->spmi->dev, "%s\n", __func__);
+
 	rc = qpnp_pon_input_dispatch(pon, PON_RESIN);
 	if (rc)
 		dev_err(&pon->spmi->dev, "Unable to send input event\n");
@@ -647,6 +651,8 @@ static irqreturn_t qpnp_cblpwr_irq(int irq, void *_pon)
 {
 	int rc;
 	struct qpnp_pon *pon = _pon;
+
+	dev_dbg(&pon->spmi->dev, "%s\n", __func__);
 
 	rc = qpnp_pon_input_dispatch(pon, PON_CBLPWR);
 	if (rc)
@@ -739,6 +745,8 @@ static void bark_work_func(struct work_struct *work)
 		input_report_key(pon->pon_input, cfg->key_code, 0);
 		input_sync(pon->pon_input);
 		enable_irq(cfg->bark_irq);
+		dev_dbg(&pon->spmi->dev, "%s: enabled bark irq %d\n", __func__,
+						cfg->bark_irq);
 	} else {
 		/* disable reset */
 		rc = qpnp_pon_masked_write(pon, cfg->s2_cntl2_addr,
@@ -764,6 +772,7 @@ static irqreturn_t qpnp_resin_bark_irq(int irq, void *_pon)
 
 	/* disable the bark interrupt */
 	disable_irq_nosync(irq);
+	dev_dbg(&pon->spmi->dev, "%s: disabled irq %d\n", __func__, irq);
 
 	cfg = qpnp_get_cfg(pon, PON_RESIN);
 	if (!cfg) {
@@ -1129,6 +1138,9 @@ static int qpnp_pon_config_init(struct qpnp_pon *pon)
 				bark is not required from PMIC versions 3.0*/
 				if (!(revid_rev4 == PMIC8941_V1_REV4 ||
 					revid_rev4 == PMIC8941_V2_REV4)) {
+					dev_info(&pon->spmi->dev,
+						"%s: bark not used\n",
+						__func__);
 					cfg->support_reset = false;
 					cfg->use_bark = false;
 				}

@@ -1,0 +1,4 @@
+config KMSG_DUMPER
+	tristate "Kmsg panic/oops dumper"
+	help
+		This enables panic and oops messages to be logged to a file.

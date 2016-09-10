@@ -1,9 +1,10 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /*
  *
  * FocalTech ft5x06 TouchScreen driver.
  *
  * Copyright (c) 2010  Focal tech Ltd.
- * Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -29,8 +30,12 @@
 #include <linux/regulator/consumer.h>
 #include <linux/firmware.h>
 #include <linux/debugfs.h>
-#include <linux/sensors.h>
 #include <linux/input/ft5x06_ts.h>
+
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes
+#include <linux/uaccess.h>
+#include <linux/irq.h>
+#endif
 
 #if defined(CONFIG_FB)
 #include <linux/notifier.h>
@@ -74,40 +79,6 @@
 #define FT_REG_FW_MIN_VER	0xB2
 #define FT_REG_FW_SUB_MIN_VER	0xB3
 
-/* psensor register address*/
-#define FT_REG_PSENSOR_ENABLE	0xB0
-#define FT_REG_PSENSOR_STATUS	0x01
-
-/* psensor register bits*/
-#define FT_PSENSOR_ENABLE_MASK	0x01
-#define FT_PSENSOR_STATUS_NEAR	0xC0
-#define FT_PSENSOR_STATUS_FAR	0xE0
-#define FT_PSENSOR_FAR_TO_NEAR	0
-#define FT_PSENSOR_NEAR_TO_FAR	1
-#define FT_PSENSOR_ORIGINAL_STATE_FAR	1
-#define FT_PSENSOR_WAKEUP_TIMEOUT	500
-
-/* gesture register address*/
-#define FT_REG_GESTURE_ENABLE	0xD0
-#define FT_REG_GESTURE_OUTPUT	0xD3
-
-/* gesture register bits*/
-#define FT_GESTURE_DOUBLECLICK_COORD_X		100
-#define FT_GESTURE_DOUBLECLICK_COORD_Y		100
-#define FT_GESTURE_WAKEUP_TIMEOUT		500
-#define FT_GESTURE_DEFAULT_TRACKING_ID		0x0A
-#define FT_GESTURE_DOUBLECLICK_ID		0x24
-#define FT_GESTURE_POINTER_NUM_MAX		128
-#define FT_GESTURE_POINTER_SIZEOF		4
-#define FT_GESTURE_ID_FLAG_SIZE			1
-#define FT_GESTURE_POINTER_NUM_FLAG_SIZE	1
-/* 6 bytes are taken to mark which gesture is supported in firmware */
-#define FT_GESTURE_SET_FLAG_SIZE		6
-#define I2C_TRANSFER_MAX_BYTE			255
-#define FT_GESTURE_DATA_HEADER	(FT_GESTURE_ID_FLAG_SIZE + \
-				FT_GESTURE_POINTER_NUM_FLAG_SIZE + \
-				FT_GESTURE_SET_FLAG_SIZE)
-
 /* power register bits*/
 #define FT_PMODE_ACTIVE		0x00
 #define FT_PMODE_MONITOR	0x01
@@ -147,6 +118,36 @@
 #define FT_FW_MIN_SIZE		8
 #define FT_FW_MAX_SIZE		32768
 
+/*kangyan@uniscope_drv 20141125 add tp auto upgrade begin*/
+/* This macro is used for TP auto upgrade ,if TP is died in using ,
+and upgrade other version is no use, we can open it and test,now ,the 
+defaule states is closed*/
+#if defined TPD_AUTO_UPGRADE
+
+#define CTP_IC_TYPE 0x14
+#define TPD_MAX_POINTS_5    5
+#define TPD_MAX_POINTS_2    2
+#define AUTO_CLB_NEED   1
+#define AUTO_CLB_NONEED     0
+static u8 is_ic_update_crash = 0;
+static struct i2c_client *update_client = NULL;
+struct Upgrade_Info fts_updateinfo[] =
+{
+    {0x55,"FT5x06",TPD_MAX_POINTS_5,AUTO_CLB_NEED,50, 30, 0x79, 0x03, 1, 2000},
+    {0x08,"FT5606",TPD_MAX_POINTS_5,AUTO_CLB_NEED,50, 30, 0x79, 0x06, 100, 2000},
+    {0x0a,"FT5x16",TPD_MAX_POINTS_5,AUTO_CLB_NEED,50, 30, 0x79, 0x07, 1, 1500},
+    {0x05,"FT6208",TPD_MAX_POINTS_2,AUTO_CLB_NONEED,60, 30, 0x79, 0x05, 10, 2000},
+    {0x06,"FT6x06",TPD_MAX_POINTS_2,AUTO_CLB_NONEED,100, 30, 0x79, 0x08, 10, 2000},
+    {0x36,"FT6x36",TPD_MAX_POINTS_2,AUTO_CLB_NONEED,100, 30, 0x79, 0x18, 10, 2000},//CHIP ID error
+    {0x55,"FT5x06i",TPD_MAX_POINTS_5,AUTO_CLB_NEED,50, 30, 0x79, 0x03, 1, 2000},
+    {0x14,"FT5336",TPD_MAX_POINTS_5,AUTO_CLB_NONEED,30, 30, 0x79, 0x11, 10, 2000},
+    {0x13,"FT3316",TPD_MAX_POINTS_5,AUTO_CLB_NONEED,30, 30, 0x79, 0x11, 10, 2000},
+    {0x12,"FT5436i",TPD_MAX_POINTS_5,AUTO_CLB_NONEED,30, 30, 0x79, 0x11, 10, 2000},
+    {0x11,"FT5336i",TPD_MAX_POINTS_5,AUTO_CLB_NONEED,30, 30, 0x79, 0x11, 10, 2000},
+};
+
+#endif
+/*kangyan@uniscope_drv 20141125 add tp auto upgrade end*/
 /* Firmware file is not supporting minor and sub minor so use 0 */
 #define FT_FW_FILE_MAJ_VER(x)	((x)->data[(x)->size - 2])
 #define FT_FW_FILE_MIN_VER(x)	0
@@ -202,11 +203,11 @@
 #define FT_MAGIC_BLOADER_LZ4	0x6ffa
 #define FT_MAGIC_BLOADER_GZF_30	0x7ff4
 #define FT_MAGIC_BLOADER_GZF	0x7bf4
-
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes
 #define PINCTRL_STATE_ACTIVE	"pmx_ts_active"
 #define PINCTRL_STATE_SUSPEND	"pmx_ts_suspend"
 #define PINCTRL_STATE_RELEASE	"pmx_ts_release"
-
+#endif
 enum {
 	FT_BLOADER_VERSION_LZ4 = 0,
 	FT_BLOADER_VERSION_Z7 = 1,
@@ -238,14 +239,34 @@ enum {
 
 #define FT_DEBUG_DIR_NAME	"ts_debug"
 
+#ifdef UNISCOPE_DRIVER_QC8909  
+static struct workqueue_struct *ft5x06_wq;
+int uniscope_debug_flag = 0;
+#define UNISCOPE_DEBUG(fmt,arg...)          do{\
+                                         if(uniscope_debug_flag)\
+                                         pr_err("DATANG [%d]"fmt"\n",__LINE__, ##arg);\
+                                       }while(0)
+#endif
+
+#ifdef UNISCOPE_DRIVER_L700  //liguowei@uniscope.com 20141126
+int uniscope_imobile_charger_flag = 0;
+#endif
+
 struct ft5x06_ts_data {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
 	const struct ft5x06_ts_platform_data *pdata;
-	struct ft5x06_psensor_platform_data *psensor_pdata;
-	struct ft5x06_gesture_platform_data *gesture_pdata;
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20140703
+	struct regulator *avdd;	
+	struct work_struct  work;	
+#endif
 	struct regulator *vdd;
 	struct regulator *vcc_i2c;
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes
+	spinlock_t irq_lock;
+	s32 irq_is_disabled;
+	s32 use_irq;
+#endif
 	char fw_name[FT_FW_NAME_MAX_LEN];
 	bool loading_fw;
 	u8 family_id;
@@ -257,47 +278,21 @@ struct ft5x06_ts_data {
 	u32 tch_data_len;
 	u8 fw_ver[3];
 	u8 fw_vendor_id;
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20140703
+	bool power_on;
+#endif
 #if defined(CONFIG_FB)
 	struct notifier_block fb_notif;
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 	struct early_suspend early_suspend;
 #endif
 	struct pinctrl *ts_pinctrl;
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes
 	struct pinctrl_state *pinctrl_state_active;
 	struct pinctrl_state *pinctrl_state_suspend;
 	struct pinctrl_state *pinctrl_state_release;
+#endif
 };
-
-static int ft5x06_ts_start(struct device *dev);
-static int ft5x06_ts_stop(struct device *dev);
-
-static struct sensors_classdev __maybe_unused sensors_proximity_cdev = {
-	.name = "ft5x06-proximity",
-	.vendor = "FocalTech",
-	.version = 1,
-	.handle = SENSORS_PROXIMITY_HANDLE,
-	.type = SENSOR_TYPE_PROXIMITY,
-	.max_range = "5.0",
-	.resolution = "5.0",
-	.sensor_power = "0.1",
-	.min_delay = 0,
-	.fifo_reserved_event_count = 0,
-	.fifo_max_event_count = 0,
-	.enabled = 0,
-	.delay_msec = 200,
-	.sensors_enable = NULL,
-	.sensors_poll_delay = NULL,
-};
-
-static inline bool ft5x06_psensor_support_enabled(void)
-{
-	return config_enabled(CONFIG_TOUCHSCREEN_FT5X06_PSENSOR);
-}
-
-static inline bool ft5x06_gesture_support_enabled(void)
-{
-	return config_enabled(CONFIG_TOUCHSCREEN_FT5X06_GESTURE);
-}
 
 static int ft5x06_i2c_read(struct i2c_client *client, char *writebuf,
 			   int writelen, char *readbuf, int readlen)
@@ -374,279 +369,6 @@ static int ft5x0x_read_reg(struct i2c_client *client, u8 addr, u8 *val)
 	return ft5x06_i2c_read(client, &addr, 1, val, 1);
 }
 
-#ifdef CONFIG_TOUCHSCREEN_FT5X06_PSENSOR
-static void ft5x06_psensor_enable(struct ft5x06_ts_data *data, int enable)
-{
-	u8 state;
-	int ret = -1;
-
-	if (data->client == NULL)
-		return;
-
-	ft5x0x_read_reg(data->client, FT_REG_PSENSOR_ENABLE, &state);
-	if (enable)
-		state |= FT_PSENSOR_ENABLE_MASK;
-	else
-		state &= ~FT_PSENSOR_ENABLE_MASK;
-
-	ret = ft5x0x_write_reg(data->client, FT_REG_PSENSOR_ENABLE, state);
-	if (ret < 0)
-		dev_err(&data->client->dev,
-			"write psensor switch command failed\n");
-	return;
-}
-
-static int ft5x06_psensor_enable_set(struct sensors_classdev *sensors_cdev,
-		unsigned int enable)
-{
-	struct ft5x06_psensor_platform_data *psensor_pdata =
-		container_of(sensors_cdev,
-			struct ft5x06_psensor_platform_data, ps_cdev);
-	struct ft5x06_ts_data *data = psensor_pdata->data;
-	struct input_dev *input_dev = data->psensor_pdata->input_psensor_dev;
-
-	mutex_lock(&input_dev->mutex);
-	ft5x06_psensor_enable(data, enable);
-	psensor_pdata->tp_psensor_data = FT_PSENSOR_ORIGINAL_STATE_FAR;
-	if (enable)
-		psensor_pdata->tp_psensor_opened = 1;
-	else
-		psensor_pdata->tp_psensor_opened = 0;
-	mutex_unlock(&input_dev->mutex);
-	return enable;
-}
-
-static int ft5x06_read_tp_psensor_data(struct ft5x06_ts_data *data)
-{
-	u8 psensor_status;
-	char tmp;
-	int ret = 1;
-
-	ft5x0x_read_reg(data->client,
-			FT_REG_PSENSOR_STATUS, &psensor_status);
-
-	tmp = data->psensor_pdata->tp_psensor_data;
-	if (psensor_status == FT_PSENSOR_STATUS_NEAR)
-		data->psensor_pdata->tp_psensor_data =
-						FT_PSENSOR_FAR_TO_NEAR;
-	else if (psensor_status == FT_PSENSOR_STATUS_FAR)
-		data->psensor_pdata->tp_psensor_data =
-						FT_PSENSOR_NEAR_TO_FAR;
-
-	if (tmp != data->psensor_pdata->tp_psensor_data) {
-		dev_dbg(&data->client->dev,
-				"%s sensor data changed\n", __func__);
-		ret = 0;
-	}
-	return ret;
-}
-#else
-static int ft5x06_psensor_enable_set(struct sensors_classdev *sensors_cdev,
-		unsigned int enable)
-{
-	return enable;
-}
-
-static int ft5x06_read_tp_psensor_data(struct ft5x06_ts_data *data)
-{
-	return 0;
-}
-#endif
-
-#ifdef CONFIG_TOUCHSCREEN_FT5X06_GESTURE
-static ssize_t ft5x06_gesture_enable_to_set_show(struct device *dev,
-				struct device_attribute *attr, char *buf)
-{
-	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
-
-	return scnprintf(buf, PAGE_SIZE, "%d\n",
-			data->gesture_pdata->gesture_enable_to_set);
-}
-
-static ssize_t ft5x06_gesture_enable_to_set_store(struct device *dev,
-				struct device_attribute *attr,
-				const char *buf, size_t size)
-{
-	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
-	unsigned long value = 0;
-	int ret;
-
-	if (data->suspended)
-		return -EINVAL;
-
-	ret = kstrtoul(buf, 16, &value);
-	if (ret < 0) {
-		dev_err(dev, "%s:kstrtoul failed, ret=0x%x\n",
-			__func__, ret);
-		return ret;
-	}
-
-	if (1 == value)
-		data->gesture_pdata->gesture_enable_to_set = 1;
-	else
-		data->gesture_pdata->gesture_enable_to_set = 0;
-	return size;
-}
-
-static DEVICE_ATTR(enable, 0664,
-		ft5x06_gesture_enable_to_set_show,
-		ft5x06_gesture_enable_to_set_store);
-
-static int ft5x06_entry_pocket(struct device *dev)
-{
-	return ft5x06_ts_stop(dev);
-}
-
-static int ft5x06_leave_pocket(struct device *dev)
-{
-	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
-	int err;
-
-	ft5x06_ts_start(dev);
-	ft5x0x_write_reg(data->client, FT_REG_GESTURE_ENABLE, 1);
-	err = enable_irq_wake(data->client->irq);
-	if (err)
-		dev_err(&data->client->dev,
-			"%s: set_irq_wake failed\n", __func__);
-	data->suspended = true;
-
-	return err;
-}
-
-static ssize_t gesture_in_pocket_mode_show(struct device *dev,
-				struct device_attribute *attr, char *buf)
-{
-	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
-
-	return scnprintf(buf, PAGE_SIZE, "%d\n",
-			data->gesture_pdata->in_pocket);
-}
-
-static ssize_t gesture_in_pocket_mode_store(struct device *dev,
-				struct device_attribute *attr,
-				const char *buf, size_t size)
-{
-	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
-	unsigned long value = 0;
-	int ret;
-
-	ret = kstrtoul(buf, 16, &value);
-	if (ret < 0) {
-		dev_err(dev, "%s:kstrtoul failed, ret=0x%x\n",
-			__func__, ret);
-		return ret;
-	}
-
-	if (1 == value && data->gesture_pdata->in_pocket == 0) {
-		data->gesture_pdata->in_pocket = 1;
-		ft5x06_entry_pocket(dev);
-	} else if (0 == value && data->gesture_pdata->in_pocket == 1) {
-		ft5x06_leave_pocket(dev);
-		data->gesture_pdata->in_pocket = 0;
-	}
-	return size;
-}
-
-static DEVICE_ATTR(pocket, 0664,
-		gesture_in_pocket_mode_show,
-		gesture_in_pocket_mode_store);
-
-static int ft5x06_report_gesture_doubleclick(struct input_dev *ip_dev)
-{
-	int i;
-	for (i = 0; i < 2; i++) {
-		input_mt_slot(ip_dev, FT_GESTURE_DEFAULT_TRACKING_ID);
-		input_mt_report_slot_state(ip_dev, MT_TOOL_FINGER, 1);
-		input_report_abs(ip_dev, ABS_MT_POSITION_X,
-					FT_GESTURE_DOUBLECLICK_COORD_X);
-		input_report_abs(ip_dev, ABS_MT_POSITION_Y,
-					FT_GESTURE_DOUBLECLICK_COORD_Y);
-		input_mt_report_pointer_emulation(ip_dev, false);
-		input_sync(ip_dev);
-		input_mt_slot(ip_dev, FT_GESTURE_DEFAULT_TRACKING_ID);
-		input_mt_report_slot_state(ip_dev, MT_TOOL_FINGER, 0);
-		input_mt_report_pointer_emulation(ip_dev, false);
-		input_sync(ip_dev);
-	}
-	return 0;
-}
-
-static int ft5x06_report_gesture(struct i2c_client *i2c_client,
-		struct input_dev *ip_dev)
-{
-	int i, temp, gesture_data_size;
-	int gesture_coord_x, gesture_coord_y;
-	int ret = -1;
-	short pointnum = 0;
-	unsigned char buf[FT_GESTURE_POINTER_NUM_MAX *
-			FT_GESTURE_POINTER_SIZEOF + FT_GESTURE_DATA_HEADER];
-
-	buf[0] = FT_REG_GESTURE_OUTPUT;
-	ret = ft5x06_i2c_read(i2c_client, buf, 1,
-				buf, FT_GESTURE_DATA_HEADER);
-	if (ret < 0) {
-		dev_err(&i2c_client->dev, "%s read touchdata failed.\n",
-			__func__);
-		return ret;
-	}
-
-	/* FW support doubleclick */
-	if (FT_GESTURE_DOUBLECLICK_ID == buf[0]) {
-		ft5x06_report_gesture_doubleclick(ip_dev);
-		return 0;
-	}
-
-	pointnum = (short)(buf[1]) & 0xff;
-	gesture_data_size = pointnum * FT_GESTURE_POINTER_SIZEOF +
-			FT_GESTURE_DATA_HEADER;
-	buf[0] = FT_REG_GESTURE_OUTPUT;
-	temp = gesture_data_size / I2C_TRANSFER_MAX_BYTE;
-	for (i = 0; i < temp; i++)
-		ret = ft5x06_i2c_read(i2c_client, buf, ((i == 0) ? 1 : 0),
-			buf + I2C_TRANSFER_MAX_BYTE * i, I2C_TRANSFER_MAX_BYTE);
-	ret = ft5x06_i2c_read(i2c_client, buf, ((temp == 0) ? 1 : 0),
-			buf + I2C_TRANSFER_MAX_BYTE * temp,
-			gesture_data_size - I2C_TRANSFER_MAX_BYTE * temp);
-	if (ret < 0) {
-		dev_err(&i2c_client->dev, "%s read touchdata failed.\n",
-			__func__);
-		return ret;
-	}
-
-	for (i = 0; i < pointnum; i++) {
-		gesture_coord_x = (((s16) buf[FT_GESTURE_DATA_HEADER +
-				(FT_GESTURE_POINTER_SIZEOF * i)]) & 0x0F) << 8 |
-				(((s16) buf[FT_GESTURE_DATA_HEADER + 1 +
-				(FT_GESTURE_POINTER_SIZEOF * i)]) & 0xFF);
-		gesture_coord_y = (((s16) buf[FT_GESTURE_DATA_HEADER + 2 +
-				(FT_GESTURE_POINTER_SIZEOF * i)]) & 0x0F) << 8 |
-				(((s16) buf[FT_GESTURE_DATA_HEADER + 3 +
-				(FT_GESTURE_POINTER_SIZEOF * i)]) & 0xFF);
-		input_mt_slot(ip_dev, FT_GESTURE_DEFAULT_TRACKING_ID);
-		input_mt_report_slot_state(ip_dev, MT_TOOL_FINGER, 1);
-		input_report_abs(ip_dev, ABS_MT_POSITION_X, gesture_coord_x);
-		input_report_abs(ip_dev, ABS_MT_POSITION_Y, gesture_coord_y);
-		input_mt_report_pointer_emulation(ip_dev, false);
-		input_sync(ip_dev);
-	}
-	input_mt_slot(ip_dev, FT_GESTURE_DEFAULT_TRACKING_ID);
-	input_mt_report_slot_state(ip_dev, MT_TOOL_FINGER, 0);
-	input_mt_report_pointer_emulation(ip_dev, false);
-	input_sync(ip_dev);
-
-	return 0;
-}
-#else
-static DEVICE_ATTR(pocket, 0664, NULL, NULL);
-static DEVICE_ATTR(enable, 0664, NULL, NULL);
-
-static int ft5x06_report_gesture(struct i2c_client *i2c_client,
-		struct input_dev *ip_dev)
-{
-	return 0;
-}
-#endif
-
 static void ft5x06_update_fw_vendor_id(struct ft5x06_ts_data *data)
 {
 	struct i2c_client *client = data->client;
@@ -684,69 +406,174 @@ static void ft5x06_update_fw_ver(struct ft5x06_ts_data *data)
 		data->fw_ver[0], data->fw_ver[1], data->fw_ver[2]);
 }
 
-static irqreturn_t ft5x06_ts_interrupt(int irq, void *dev_id)
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes
+/*******************************************************
+Function:
+	Disable irq function
+Input:
+	ts: ft5x06 i2c_client private data
+Output:
+	None.
+*********************************************************/
+void ft5x06_irq_disable(struct ft5x06_ts_data *ts)
 {
-	struct ft5x06_ts_data *data = dev_id;
+	unsigned long irqflags;
+
+	spin_lock_irqsave(&ts->irq_lock, irqflags);
+	if (!ts->irq_is_disabled) {
+		ts->irq_is_disabled = true;
+		disable_irq_nosync(ts->client->irq);
+	}
+	spin_unlock_irqrestore(&ts->irq_lock, irqflags);
+}
+
+/*******************************************************
+Function:
+	Enable irq function
+Input:
+	ts: ft5x06 i2c_client private data
+Output:
+	None.
+*********************************************************/
+void ft5x06_irq_enable(struct ft5x06_ts_data *ts)
+{
+	unsigned long irqflags = 0;
+
+	spin_lock_irqsave(&ts->irq_lock, irqflags);
+	if (ts->irq_is_disabled) {
+		enable_irq(ts->client->irq);
+		ts->irq_is_disabled = false;
+	}
+	spin_unlock_irqrestore(&ts->irq_lock, irqflags);
+}
+
+#endif
+
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20140703
+static int reg_set_optimum_mode_check(struct regulator *reg, int load_uA)
+{
+	return (regulator_count_voltages(reg) > 0) ?
+		regulator_set_optimum_mode(reg, load_uA) : 0;
+}
+#endif
+
+#ifdef UNISCOPE_DRIVER_QC8909 //liguowei@uniscope.com 20140827 for up issue 
+extern bool uni_charger_status_using_ft5x06; //  Jason charge 20140901
+
+static void ft5x0x_read_Touchdata_Work(struct work_struct *work)
+{
+       struct ft5x06_ts_data *data = NULL;
 	struct input_dev *ip_dev;
+	static u8 last_touchpoint=0;  // add by zhuqy for up issue @20140529
+	static u8 Retry_iic=0;  // add by JasonLv for up issue @20140529
+        static u8 usb_charge_flag=0;  //  Jason charge 20140901
+        static  u8 charger_ftstatus =0;
+        int ret=0;  //error 0; ok 1 
 	int rc, i;
 	u32 id, x, y, status, num_touches;
-	u8 reg, *buf, gesture_is_active;
+	u8 touch_cnums;
+	u8 reg = 0x00, *buf;
+	char txbuf[2];        //  Jason charge 20140901
 	bool update_input = false;
+
+	 data = container_of(work, struct ft5x06_ts_data, work);
+	 
+        UNISCOPE_DEBUG("%s \n",__func__);
 
 	if (!data) {
 		pr_err("%s: Invalid data\n", __func__);
-		return IRQ_HANDLED;
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes
+		if (data->use_irq)
+		     ft5x06_irq_enable(data);	
+#endif
+		return ;
 	}
+	/* please   check  usb_charge_flag firstly*/ // if(usb_charge_onoff==1)&&(usb_charge_onoff!=charge_ft)  
+	if(uni_charger_status_using_ft5x06) 
+		charger_ftstatus = 0x01;
+	else
+		charger_ftstatus = 0;
+
+	if((charger_ftstatus==1) && (usb_charge_flag!=charger_ftstatus ))
+	{
+		txbuf[0] = 0x8B;
+		txbuf[1] = 0x01;
+		ret=ft5x06_i2c_write(data->client, txbuf, sizeof(txbuf));
+		if(ret==1)//  Jason charge flag 20140901
+	          {
+                  	txbuf[0] = 0x8B;
+		        txbuf[1] = 0x01;
+			ret=ft5x06_i2c_write(data->client, txbuf, sizeof(txbuf));
+			usb_charge_flag=charger_ftstatus;
+	           }
+        }
+        else if((charger_ftstatus==0) && (usb_charge_flag!=charger_ftstatus ))//  Jason charge flag 20140901
+        {
+		txbuf[0] = 0x8B;
+	        txbuf[1] = 0x00;//report 80 times per second
+		ret=ft5x06_i2c_write(data->client, txbuf, sizeof(txbuf));
+	       if (ret>0)  
+	          usb_charge_flag=0;
+	   }
 
 	ip_dev = data->input_dev;
 	buf = data->tch_data;
 
-	if (ft5x06_psensor_support_enabled() && data->pdata->psensor_support &&
-		data->psensor_pdata->tp_psensor_opened) {
-		rc = ft5x06_read_tp_psensor_data(data);
-		if (!rc) {
-			if (data->suspended)
-				pm_wakeup_event(&data->client->dev,
-					FT_PSENSOR_WAKEUP_TIMEOUT);
-			input_report_abs(data->psensor_pdata->input_psensor_dev,
-					ABS_DISTANCE,
-					data->psensor_pdata->tp_psensor_data);
-			input_sync(data->psensor_pdata->input_psensor_dev);
-			if (data->suspended)
-				return IRQ_HANDLED;
-		}
-		if (data->suspended)
-			return IRQ_HANDLED;
-	}
-
-	if (ft5x06_gesture_support_enabled() && data->pdata->gesture_support) {
-		ft5x0x_read_reg(data->client, FT_REG_GESTURE_ENABLE,
-					&gesture_is_active);
-		if (gesture_is_active) {
-			pm_wakeup_event(&(data->client->dev),
-					FT_GESTURE_WAKEUP_TIMEOUT);
-			ft5x06_report_gesture(data->client, ip_dev);
-			return IRQ_HANDLED;
-		}
-	}
-
-	/*
-	 * Read touch data start from register FT_REG_DEV_MODE.
-	 * The touch x/y value start from FT_TOUCH_X_H/L_POS and
-	 * FT_TOUCH_Y_H/L_POS in buf.
-	 */
-	reg = FT_REG_DEV_MODE;
-	rc = ft5x06_i2c_read(data->client, &reg, 1, buf, data->tch_data_len);
+	rc = ft5x06_i2c_read(data->client, &reg, 1,
+			buf, data->tch_data_len);
 	if (rc < 0) {
 		dev_err(&data->client->dev, "%s: read data fail\n", __func__);
-		return IRQ_HANDLED;
+		 Retry_iic++;
 	}
+	else 
+	{
+		if (buf[FT_TD_STATUS]==0 && buf[15]<0xff )
+		   {
+		   	Retry_iic++;
+			}
+		 else 
+		 	Retry_iic=0;
+        }
+	if (Retry_iic>=3) //liguowei@uniscope.com 20141016 decrease tp sleep time
+	{
+		gpio_set_value_cansleep(data->pdata->reset_gpio, 0);
+		msleep(data->pdata->hard_rst_dly);
+		gpio_set_value_cansleep(data->pdata->reset_gpio, 1);
+		
+	 if (gpio_is_valid(data->pdata->reset_gpio)) 
+	 {
+	 	for (i = 0; i <  data->pdata->num_max_touches; i++) {
+		input_mt_slot(data->input_dev, i);
+		input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, 0);
+	 }
+	 }
+	msleep(260);//liguowei@uniscope.com 20141224  tp sleep time
+	UNISCOPE_DEBUG("Retry_iic=%d   reset_gpio  0-->1   %s\n", Retry_iic,__func__);
+
+	for (i = 0; i <  data->pdata->num_max_touches; i++) {
+		input_mt_slot(data->input_dev, i);
+		input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, 0);
+	     }
+	input_mt_report_pointer_emulation(ip_dev, false);
+	input_sync(ip_dev);
+
+	 Retry_iic=0;
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes
+	  if(data->use_irq)
+		     ft5x06_irq_enable(data);	
+#endif
+         return ;
+     }
+	
+	
+	touch_cnums=buf[2]&0x7;  // read point num from  TP
 
 	for (i = 0; i < data->pdata->num_max_touches; i++) {
-		id = (buf[FT_TOUCH_ID_POS + FT_ONE_TCH_LEN * i]) >> 4;
-		if (id >= FT_MAX_ID)
-			break;
+		id = (buf[FT_TOUCH_ID_POS + FT_ONE_TCH_LEN * i]) >> 4;         // point id  
 
+		if (id >= FT_MAX_ID)                                 // 	if ((pointid >= FT_MAX_ID)&&(eventid==3))
+              
+		break;
 		update_input = true;
 
 		x = (buf[FT_TOUCH_X_H_POS + FT_ONE_TCH_LEN * i] & 0x0F) << 8 |
@@ -754,106 +581,140 @@ static irqreturn_t ft5x06_ts_interrupt(int irq, void *dev_id)
 		y = (buf[FT_TOUCH_Y_H_POS + FT_ONE_TCH_LEN * i] & 0x0F) << 8 |
 			(buf[FT_TOUCH_Y_L_POS + FT_ONE_TCH_LEN * i]);
 
-		status = buf[FT_TOUCH_EVENT_POS + FT_ONE_TCH_LEN * i] >> 6;
-
-		num_touches = buf[FT_TD_STATUS] & FT_STATUS_NUM_TP_MASK;
-
+		status = buf[FT_TOUCH_EVENT_POS + FT_ONE_TCH_LEN * i] >> 6;    // event id
+                num_touches = buf[FT_TD_STATUS] & FT_STATUS_NUM_TP_MASK;  // buf[2]
 		/* invalid combination */
-		if (!num_touches && !status && !id)
-			break;
+		if (!num_touches && !status && !id)   	
+		break;
 
 		input_mt_slot(ip_dev, id);
-		if (status == FT_TOUCH_DOWN || status == FT_TOUCH_CONTACT) {
+		if (status == FT_TOUCH_DOWN || status == FT_TOUCH_CONTACT) 
+		{
 			input_mt_report_slot_state(ip_dev, MT_TOOL_FINGER, 1);
 			input_report_abs(ip_dev, ABS_MT_POSITION_X, x);
 			input_report_abs(ip_dev, ABS_MT_POSITION_Y, y);
-		} else {
+		} 
+		else 
+		{
 			input_mt_report_slot_state(ip_dev, MT_TOOL_FINGER, 0);
 		}
+//  请在这里把 X,Y, id, status 4 个值，打印出来，做Debug 追踪	????	
+		        UNISCOPE_DEBUG("id=%d status=%d x=%d y=%d     %s\n", id,status, x, y,__func__);
 	}
+	
+	 if((last_touchpoint>0)&&(touch_cnums==0))    // add by zhuqy for up issue @20140529
+	{	/* release all touches */ 
+	for (i = 0; i <  data->pdata->num_max_touches; i++) {
+		input_mt_slot(data->input_dev, i);
+		input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, 0);
+	}
+	last_touchpoint=0;
 
-	if (update_input) {
+        } 
+	
+
+	if (update_input) 
+	{
 		input_mt_report_pointer_emulation(ip_dev, false);
 		input_sync(ip_dev);
 	}
+      
+        // 请在这里last_touchpoint = %d,touch_cnums = %d 打印出来，做Debug 追踪	
+        //  
+	UNISCOPE_DEBUG("last_touchpoint=%d touch_cnums=%d    %s\n", last_touchpoint,touch_cnums,__func__);
+		
+        last_touchpoint= touch_cnums; // add by zhuqy for up issue @20140529
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes
+        if(data->use_irq)
+		     ft5x06_irq_enable(data);	
+#endif
+   	return ;
 
-	return IRQ_HANDLED;
-}
+} 
 
-static int ft5x06_gpio_configure(struct ft5x06_ts_data *data, bool on)
+static irqreturn_t ft5x06_ts_interrupt(int irq, void *dev_id)
 {
-	int err = 0;
 
-	if (on) {
-		if (gpio_is_valid(data->pdata->irq_gpio)) {
-			err = gpio_request(data->pdata->irq_gpio,
-						"ft5x06_irq_gpio");
-			if (err) {
-				dev_err(&data->client->dev,
-					"irq gpio request failed");
-				goto err_irq_gpio_req;
-			}
+	struct ft5x06_ts_data *data = dev_id;
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes
+   ft5x06_irq_disable(data);
+#endif
+   UNISCOPE_DEBUG("%s interrupt is really comming\n",__func__);
+	
+    queue_work(ft5x06_wq, &data->work);
+	return IRQ_HANDLED;
 
-			err = gpio_direction_input(data->pdata->irq_gpio);
-			if (err) {
-				dev_err(&data->client->dev,
-					"set_direction for irq gpio failed\n");
-				goto err_irq_gpio_dir;
-			}
-		}
+}
+#endif
 
-		if (gpio_is_valid(data->pdata->reset_gpio)) {
-			err = gpio_request(data->pdata->reset_gpio,
-						"ft5x06_reset_gpio");
-			if (err) {
-				dev_err(&data->client->dev,
-					"reset gpio request failed");
-				goto err_irq_gpio_dir;
-			}
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20140703
+#define ft5x06_VDD_LOAD_MAX_UA	10000 //liguowei
 
-			err = gpio_direction_output(data->pdata->reset_gpio, 0);
-			if (err) {
-				dev_err(&data->client->dev,
-				"set_direction for reset gpio failed\n");
-				goto err_reset_gpio_dir;
-			}
-			msleep(data->pdata->hard_rst_dly);
-			gpio_set_value_cansleep(data->pdata->reset_gpio, 1);
-		}
+static int ft5x06_power_on(struct ft5x06_ts_data *data)
+{
+	int ret;
 
-		return 0;
-	} else {
-		if (gpio_is_valid(data->pdata->irq_gpio))
-			gpio_free(data->pdata->irq_gpio);
-		if (gpio_is_valid(data->pdata->reset_gpio)) {
-			/*
-			 * This is intended to save leakage current
-			 * only. Even if the call(gpio_direction_input)
-			 * fails, only leakage current will be more but
-			 * functionality will not be affected.
-			 */
-			err = gpio_direction_input(data->pdata->reset_gpio);
-			if (err) {
-				dev_err(&data->client->dev,
-					"unable to set direction for gpio "
-					"[%d]\n", data->pdata->irq_gpio);
-			}
-			gpio_free(data->pdata->reset_gpio);
-		}
-
+	if (data->power_on) {
+		dev_info(&data->client->dev,
+				"Device already power on\n");
 		return 0;
 	}
+	if (!IS_ERR(data->avdd)) {
+		ret = reg_set_optimum_mode_check(data->avdd,
+			ft5x06_VDD_LOAD_MAX_UA);
+		if (ret < 0) {
+			dev_err(&data->client->dev,
+				"Regulator avdd set_opt failed rc=%d\n", ret);
+			goto err_set_opt_avdd;
+		}
+		ret = regulator_enable(data->avdd);
+		if (ret) {
+			dev_err(&data->client->dev,
+				"Regulator avdd enable failed ret=%d\n", ret);
+			goto err_enable_avdd;
+		} 
+	}
+	data->power_on=true;
+	return 0;
 
-err_reset_gpio_dir:
-	if (gpio_is_valid(data->pdata->reset_gpio))
-		gpio_free(data->pdata->reset_gpio);
-err_irq_gpio_dir:
-	if (gpio_is_valid(data->pdata->irq_gpio))
-		gpio_free(data->pdata->irq_gpio);
-err_irq_gpio_req:
-	return err;
+       err_enable_avdd:
+       err_set_opt_avdd:
+	data->power_on=false;
+	return ret;
 }
 
+static int ft5x06_power_off(struct ft5x06_ts_data *data)
+{
+	int ret;
+	if (data->power_on==0) {
+		dev_err(&data->client->dev,
+				"Device already power off\n");
+		return 0;
+	}
+	if (!IS_ERR(data->avdd)) {
+		ret = reg_set_optimum_mode_check(data->avdd,
+			ft5x06_VDD_LOAD_MAX_UA);
+		if (ret < 0) {
+			dev_err(&data->client->dev,
+				"Regulator avdd set_opt failed rc=%d\n", ret);
+			goto err_set_opt_avdd;
+		}
+		ret = regulator_disable(data->avdd);
+		if (ret) {
+			dev_err(&data->client->dev,
+				"Regulator avdd enable failed ret=%d\n", ret);
+			goto err_enable_avdd;
+		} 
+	}
+	data->power_on=false;
+	return 0;
+
+       err_enable_avdd:
+       err_set_opt_avdd:
+	data->power_on=true;
+	return ret;
+}
+#else
 static int ft5x06_power_on(struct ft5x06_ts_data *data, bool on)
 {
 	int rc;
@@ -898,7 +759,24 @@ power_off:
 
 	return rc;
 }
+#endif
 
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20140703
+static int ft5x06_power_init(struct ft5x06_ts_data *data )
+{
+	int ret;
+
+	data->avdd = regulator_get(&data->client->dev, "avdd");
+	if (IS_ERR(data->avdd)) {
+		ret = PTR_ERR(data->avdd);
+		dev_info(&data->client->dev,
+			"Regulator get failed avdd ret=%d\n", ret);
+	}
+
+	return 0;
+}
+
+#else
 static int ft5x06_power_init(struct ft5x06_ts_data *data, bool on)
 {
 	int rc;
@@ -965,11 +843,12 @@ pwr_deinit:
 	regulator_put(data->vcc_i2c);
 	return 0;
 }
+#endif
 
 static int ft5x06_ts_pinctrl_init(struct ft5x06_ts_data *ft5x06_data)
 {
 	int retval;
-
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes
 	/* Get pinctrl if target uses pinctrl */
 	ft5x06_data->ts_pinctrl = devm_pinctrl_get(&(ft5x06_data->client->dev));
 	if (IS_ERR_OR_NULL(ft5x06_data->ts_pinctrl)) {
@@ -995,11 +874,11 @@ static int ft5x06_ts_pinctrl_init(struct ft5x06_ts_data *ft5x06_data)
 			PINCTRL_STATE_SUSPEND);
 	if (IS_ERR_OR_NULL(ft5x06_data->pinctrl_state_suspend)) {
 		retval = PTR_ERR(ft5x06_data->pinctrl_state_suspend);
-		dev_err(&ft5x06_data->client->dev,
+			dev_err(&ft5x06_data->client->dev,
 			"Can not lookup %s pinstate %d\n",
 			PINCTRL_STATE_SUSPEND, retval);
 		goto err_pinctrl_lookup;
-	}
+		}
 
 	ft5x06_data->pinctrl_state_release
 		= pinctrl_lookup_state(ft5x06_data->ts_pinctrl,
@@ -1018,81 +897,35 @@ err_pinctrl_lookup:
 err_pinctrl_get:
 	ft5x06_data->ts_pinctrl = NULL;
 	return retval;
+#endif
 }
 
 #ifdef CONFIG_PM
-static int ft5x06_ts_start(struct device *dev)
+static int ft5x06_ts_suspend(struct device *dev)
 {
 	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
+	char txbuf[2], i;
 	int err;
 
-	if (data->pdata->power_on) {
-		err = data->pdata->power_on(true);
-		if (err) {
-			dev_err(dev, "power on failed");
-			return err;
-		}
-	} else {
-		err = ft5x06_power_on(data, true);
-		if (err) {
-			dev_err(dev, "power on failed");
-			return err;
-		}
+	if (data->loading_fw) {
+		dev_info(dev, "Firmware loading in process...\n");
+		return 0;
 	}
 
-	if (data->ts_pinctrl) {
-		err = pinctrl_select_state(data->ts_pinctrl,
-				data->pinctrl_state_active);
-		if (err < 0)
-			dev_err(dev, "Cannot get active pinctrl state\n");
+	if (data->suspended) {
+		dev_info(dev, "Already in suspend state\n");
+		return 0;
 	}
 
-	err = ft5x06_gpio_configure(data, true);
-	if (err < 0) {
-		dev_err(&data->client->dev,
-			"failed to put gpios in resue state\n");
-		goto err_gpio_configuration;
-	}
-
-	if (gpio_is_valid(data->pdata->reset_gpio)) {
-		gpio_set_value_cansleep(data->pdata->reset_gpio, 0);
-		msleep(data->pdata->hard_rst_dly);
-		gpio_set_value_cansleep(data->pdata->reset_gpio, 1);
-	}
-
-	msleep(data->pdata->soft_rst_dly);
-
-	enable_irq(data->client->irq);
-	data->suspended = false;
-
-	return 0;
-
-err_gpio_configuration:
-	if (data->ts_pinctrl) {
-		err = pinctrl_select_state(data->ts_pinctrl,
-					data->pinctrl_state_suspend);
-		if (err < 0)
-			dev_err(dev, "Cannot get suspend pinctrl state\n");
-	}
-	if (data->pdata->power_on) {
-		err = data->pdata->power_on(false);
-		if (err)
-			dev_err(dev, "power off failed");
-	} else {
-		err = ft5x06_power_on(data, false);
-		if (err)
-			dev_err(dev, "power off failed");
-	}
-	return err;
-}
-
-static int ft5x06_ts_stop(struct device *dev)
-{
-	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
-	char txbuf[2];
-	int i, err;
-
-	disable_irq(data->client->irq);
+      UNISCOPE_DEBUG("%s \n",__func__);
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes	  
+      if(data->use_irq)
+	 ft5x06_irq_disable(data);
+#endif
+	/* Added by JZZ(zhizhang) for L600 TP leak 3mA current */
+#if defined(UNISCOPE_DRIVER_L600)	
+	gpio_direction_output(data->pdata->irq_gpio, 1); 
+#endif	
 
 	/* release all touches */
 	for (i = 0; i < data->pdata->num_max_touches; i++) {
@@ -1107,7 +940,22 @@ static int ft5x06_ts_stop(struct device *dev)
 		txbuf[1] = FT_PMODE_HIBERNATE;
 		ft5x06_i2c_write(data->client, txbuf, sizeof(txbuf));
 	}
-
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20140703
+	if (data->power_on) {
+                ft5x06_power_off(data);
+		err = data->power_on=false;
+		if (err) {
+			dev_err(dev, "power off failed");
+			goto pwr_off_fail;
+		}
+	} else {
+		err = ft5x06_power_off(data);
+		if (err) {
+			dev_err(dev, "power off failed");
+			goto pwr_off_fail;
+		}
+	}
+#else
 	if (data->pdata->power_on) {
 		err = data->pdata->power_on(false);
 		if (err) {
@@ -1121,41 +969,12 @@ static int ft5x06_ts_stop(struct device *dev)
 			goto pwr_off_fail;
 		}
 	}
-
-	if (data->ts_pinctrl) {
-		err = pinctrl_select_state(data->ts_pinctrl,
-					data->pinctrl_state_suspend);
-		if (err < 0)
-			dev_err(dev, "Cannot get suspend pinctrl state\n");
-	}
-
-	err = ft5x06_gpio_configure(data, false);
-	if (err < 0) {
-		dev_err(&data->client->dev,
-			"failed to put gpios in suspend state\n");
-		goto gpio_configure_fail;
-	}
+#endif
 
 	data->suspended = true;
 
 	return 0;
 
-gpio_configure_fail:
-	if (data->ts_pinctrl) {
-		err = pinctrl_select_state(data->ts_pinctrl,
-					data->pinctrl_state_active);
-		if (err < 0)
-			dev_err(dev, "Cannot get active pinctrl state\n");
-	}
-	if (data->pdata->power_on) {
-		err = data->pdata->power_on(true);
-		if (err)
-			dev_err(dev, "power on failed");
-	} else {
-		err = ft5x06_power_on(data, true);
-		if (err)
-			dev_err(dev, "power on failed");
-	}
 pwr_off_fail:
 	if (gpio_is_valid(data->pdata->reset_gpio)) {
 		gpio_set_value_cansleep(data->pdata->reset_gpio, 0);
@@ -1166,102 +985,76 @@ pwr_off_fail:
 	return err;
 }
 
-static int ft5x06_ts_suspend(struct device *dev)
-{
-	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
-	int err;
-
-	if (data->loading_fw) {
-		dev_info(dev, "Firmware loading in process...\n");
-		return 0;
-	}
-
-	if (data->suspended) {
-		dev_info(dev, "Already in suspend state\n");
-		return 0;
-	}
-
-	if (ft5x06_psensor_support_enabled() && data->pdata->psensor_support &&
-		device_may_wakeup(dev) &&
-		data->psensor_pdata->tp_psensor_opened) {
-
-		err = enable_irq_wake(data->client->irq);
-		if (err)
-			dev_err(&data->client->dev,
-				"%s: set_irq_wake failed\n", __func__);
-		data->suspended = true;
-		return err;
-	}
-
-	if (ft5x06_gesture_support_enabled() && data->pdata->gesture_support &&
-		device_may_wakeup(dev) &&
-		data->gesture_pdata->gesture_enable_to_set) {
-
-		ft5x0x_write_reg(data->client, FT_REG_GESTURE_ENABLE, 1);
-		err = enable_irq_wake(data->client->irq);
-		if (err)
-			dev_err(&data->client->dev,
-				"%s: set_irq_wake failed\n", __func__);
-		data->suspended = true;
-		return err;
-	}
-
-	return ft5x06_ts_stop(dev);
-}
-
 static int ft5x06_ts_resume(struct device *dev)
 {
 	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
 	int err;
-
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com Jason charge 20140901
+        char txbuf[2];        
+#endif
 	if (!data->suspended) {
 		dev_dbg(dev, "Already in awake state\n");
 		return 0;
 	}
 
-	if (ft5x06_psensor_support_enabled() && data->pdata->psensor_support &&
-		device_may_wakeup(dev) &&
-		data->psensor_pdata->tp_psensor_opened) {
-		err = disable_irq_wake(data->client->irq);
-		if (err)
-			dev_err(&data->client->dev,
-				"%s: disable_irq_wake failed\n",
-				__func__);
-		data->suspended = false;
-		return err;
+       UNISCOPE_DEBUG("%s \n",__func__);
+	
+	/* Added by JZZ(zhizhang) for L600 TP leak 3mA current */
+#if defined(UNISCOPE_DRIVER_L600)		
+	err = gpio_direction_input(data->pdata->irq_gpio); 
+#endif	
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20140703
+	if (data->power_on) {
+		err = data->power_on=true;
+		if (err) {
+			dev_err(dev, "power on failed");
+			return err;
+		}
+	} else {
+		err = ft5x06_power_on(data);
+		if (err) {
+			dev_err(dev, "power on failed");
+			return err;
+		}
+	}
+#else
+	if (data->pdata->power_on) {
+		err = data->pdata->power_on(true);
+		if (err) {
+			dev_err(dev, "power on failed");
+			return err;
+		}
+	} else {
+		err = ft5x06_power_on(data, true);
+		if (err) {
+			dev_err(dev, "power on failed");
+			return err;
+		}
+	}
+#endif
+
+	if (gpio_is_valid(data->pdata->reset_gpio)) {
+		gpio_set_value_cansleep(data->pdata->reset_gpio, 0);
+		msleep(data->pdata->hard_rst_dly);
+		gpio_set_value_cansleep(data->pdata->reset_gpio, 1);
 	}
 
-	if (ft5x06_gesture_support_enabled() && data->pdata->gesture_support &&
-		device_may_wakeup(dev) &&
-		!(data->gesture_pdata->in_pocket) &&
-		data->gesture_pdata->gesture_enable_to_set) {
+	msleep(260);
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes
+	 if (data->use_irq)
+		     ft5x06_irq_enable(data);	
+#endif
+	data->suspended = false;
+	msleep(20);	
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com Jason charge 20140901
+/* please   check  usb_charge_flag firstly*/
+	if(uni_charger_status_using_ft5x06==1){  //  Jason charge 20140901
+	   	txbuf[0] = 0x8B;
+		txbuf[1] = 0x01;
+		ft5x06_i2c_write(data->client, txbuf, sizeof(txbuf));
+	   }
+#endif
 
-		ft5x0x_write_reg(data->client, FT_REG_GESTURE_ENABLE, 0);
-		err = disable_irq_wake(data->client->irq);
-		if (err)
-			dev_err(dev, "%s: disable_irq_wake failed\n",
-				__func__);
-		data->suspended = false;
-		return err;
-	}
-
-	err = ft5x06_ts_start(dev);
-	if (err < 0)
-		return err;
-
-	if (ft5x06_gesture_support_enabled() && data->pdata->gesture_support &&
-		device_may_wakeup(dev) &&
-		data->gesture_pdata->in_pocket &&
-		data->gesture_pdata->gesture_enable_to_set) {
-
-		ft5x0x_write_reg(data->client, FT_REG_GESTURE_ENABLE, 0);
-		err = disable_irq_wake(data->client->irq);
-		if (err)
-			dev_err(dev, "%s: disable_irq_wake failed\n",
-				__func__);
-		data->suspended = false;
-		data->gesture_pdata->in_pocket = 0;
-	}
 	return 0;
 }
 
@@ -1374,6 +1167,58 @@ static int ft5x06_fw_upgrade_start(struct i2c_client *client,
 	u8 is_5336_new_bootloader = false;
 	u8 is_5336_fwsize_30 = false;
 	u8 fw_ecc;
+	
+/*kangyan@uniscope_drv 20141125 add tp auto upgrade begin*/
+#if defined TPD_AUTO_UPGRADE
+	u8 reg_addr;
+	u8 chip_id = 0x00;
+
+	#if 1//READ IC INFO
+	reg_addr = FT_REG_ID;
+	temp = ft5x06_i2c_read(client, &reg_addr, 1, &chip_id, 1);
+	if (temp < 0)
+	{
+		dev_err(&client->dev, "version read failed");
+	}
+
+	if (is_ic_update_crash)
+	{
+		chip_id = CTP_IC_TYPE;
+	}
+	for(i=0; i<sizeof(fts_updateinfo)/sizeof(struct Upgrade_Info); i++)
+	{
+		if(chip_id==fts_updateinfo[i].CHIP_ID)
+		{
+			info.auto_cal = fts_updateinfo[i].AUTO_CLB;
+			info.delay_55 = fts_updateinfo[i].delay_55;
+			info.delay_aa = fts_updateinfo[i].delay_aa;
+			info.delay_erase_flash = fts_updateinfo[i].delay_earse_flash;
+			info.delay_readid = fts_updateinfo[i].delay_readid;
+			info.upgrade_id_1 = fts_updateinfo[i].upgrade_id_1;
+			info.upgrade_id_2 = fts_updateinfo[i].upgrade_id_2;
+
+			break;
+		}
+	}
+
+	ts_data->family_id = chip_id;
+
+	if(i >= sizeof(fts_updateinfo)/sizeof(struct Upgrade_Info))
+	{
+		info.auto_cal = fts_updateinfo[0].AUTO_CLB;
+		info.delay_55 = fts_updateinfo[0].delay_55;
+		info.delay_aa = fts_updateinfo[0].delay_aa;
+		info.delay_erase_flash = fts_updateinfo[0].delay_earse_flash;
+		info.delay_readid = fts_updateinfo[0].delay_readid;
+		info.upgrade_id_1 = fts_updateinfo[0].upgrade_id_1;
+		info.upgrade_id_2 = fts_updateinfo[0].upgrade_id_2;
+	}
+	#endif
+
+	dev_err(&client->dev, "id1 = 0x%x id2 = 0x%x family_id=0x%x\n",
+	info.upgrade_id_1, info.upgrade_id_2, ts_data->family_id);
+#endif
+/*kangyan@uniscope_drv 20141125 add tp auto upgrade end*/
 
 	/* determine firmware size */
 	if (*(data + data_len - FT_BLOADER_SIZE_OFF) == FT_BLOADER_NEW_SIZE)
@@ -1414,6 +1259,15 @@ static int ft5x06_fw_upgrade_start(struct i2c_client *client,
 		w_buf[3] = 0x00;
 
 		ft5x06_i2c_read(client, w_buf, 4, r_buf, 2);
+
+		/*kangyan@uniscope_drv 20141125 add tp auto upgrade begin*/
+		#if defined TPD_AUTO_UPGRADE
+        	pr_err("%s:r_buf[0]=%x, r_buf[0]=%x\n",__func__, r_buf[0], r_buf[1]);
+		r_buf[0] = 0x79;
+		r_buf[1] = 0x11;
+		#endif
+		/*kangyan@uniscope_drv 20141125 add tp auto upgrade end*/
+
 
 		if (r_buf[0] != info.upgrade_id_1
 			|| r_buf[1] != info.upgrade_id_2) {
@@ -1569,6 +1423,175 @@ static int ft5x06_fw_upgrade_start(struct i2c_client *client,
 	return 0;
 }
 
+/*kangyan@uniscope_drv 20141125 add tp auto upgrade begin*/
+#if defined TPD_AUTO_UPGRADE
+static unsigned char CTPM_FW[]=
+{
+#include "Uniscope_V08_L700_5336_0x5A_20141014_app.i"
+};
+
+static unsigned char CTPM_FW2[]=
+{
+#include "Uniscope_V08_L700_5336_0x5A_20141014_app.i"
+};
+
+
+u8 fts_ctpm_update_project_setting(struct i2c_client *client)
+{
+    u8 buf[128];
+	u8 w_buf[4], r_buf[2];
+    u32 i = 0,j=0;
+    	struct ft5x06_ts_data *ts_data = i2c_get_clientdata(client);
+    //int i_ret;
+    //
+	for (i = 0, j = 0; i < FT_UPGRADE_LOOP; i++)
+	{
+		msleep(FT_EARSE_DLY_MS);
+
+		//reset tp
+		if(gpio_is_valid(ts_data->pdata->reset_gpio))
+		{
+			gpio_set_value_cansleep(ts_data->pdata->reset_gpio, 0);
+			msleep(ts_data->pdata->hard_rst_dly);
+			gpio_set_value_cansleep(ts_data->pdata->reset_gpio, 1);
+		}
+		
+		if (i <= (FT_UPGRADE_LOOP / 2))
+			msleep(30 + i * 3);
+		else
+			msleep(30 - (i - (FT_UPGRADE_LOOP / 2)) * 2);
+		
+		/* Enter upgrade mode */
+			w_buf[0] = FT_UPGRADE_55;
+		ft5x06_i2c_write(client, &w_buf[0], 1);
+		usleep(FT_55_AA_DLY_NS);
+			w_buf[0] = FT_UPGRADE_AA;
+		ft5x06_i2c_write(client, &w_buf[0], 1);
+		
+		/* check READ_ID */
+		msleep(10);
+		w_buf[0] = FT_READ_ID_REG;
+		w_buf[1] = 0x00;
+		w_buf[2] = 0x00;
+		w_buf[3] = 0x00;
+
+		ft5x06_i2c_read(client, w_buf, 4, r_buf, 2);
+
+		if (r_buf[0] != 0x79 || r_buf[1] != 0x11)
+		{
+			continue;
+		}
+		else
+			break;
+	}
+    buf[0] = 0x03;
+    buf[1] = 0x00;
+    buf[2] = (u8)(0x07b0 >> 8);
+    buf[3] = (u8)(0x07b0);
+
+    ft5x06_i2c_read(client, buf, 4, buf, 128);
+    msleep(10);
+
+    ft5x0x_write_reg(client, 0xfc, 0xaa);
+    msleep(30);
+    ft5x0x_write_reg(client, 0xfc, 0x55);
+    msleep(200);
+
+    is_ic_update_crash = 1;
+    return buf[4];
+}
+int fts_ctpm_fw_upgrade_with_i_file(struct ft5x06_ts_data *data)
+{
+    struct i2c_client *client = data->client;
+    int  flag_TPID=0;
+    u8*     pbt_buf = 0x0;
+    int rc = 0,fw_len = 0;
+    u8 uc_host_fm_ver,uc_tp_fm_ver,vendor_id, ic_type;
+    u8 reg_addr;
+
+    //=========FW upgrade========================*/
+    pbt_buf = CTPM_FW;
+    fw_len = sizeof(CTPM_FW);
+    pr_err("update firmware size:%d", fw_len);
+
+    if (sizeof(CTPM_FW) < 8 || sizeof(CTPM_FW) > 32 * 1024 || sizeof(CTPM_FW2) < 8 || sizeof(CTPM_FW2) > 32 * 1024)
+    {
+        pr_err("FW length error\n");
+        return -1;
+    }
+
+	reg_addr = 0xA6;
+	ft5x06_i2c_read(client, &reg_addr, 1, &uc_tp_fm_ver, 1);
+	reg_addr = 0xA8;
+	ft5x06_i2c_read(client, &reg_addr, 1, &vendor_id, 1);
+	reg_addr = 0xA3;
+	ft5x06_i2c_read(client, &reg_addr, 1, &ic_type, 1);
+
+        pr_err(" %s:ic_type is %x,CTP_IC_TYPE is %x;\n",__func__,ic_type,CTP_IC_TYPE);
+
+	if(ic_type != CTP_IC_TYPE)
+	{
+		pr_err("IC type dismatch, please check");
+	}
+	
+	if(vendor_id == 0xA8 || vendor_id == 0x00 || ic_type == 0xA3 || ic_type == 0x00)
+	{
+		pr_err("vend_id read error,need project");
+		vendor_id = fts_ctpm_update_project_setting(client);
+		flag_TPID = 1;
+	}
+
+	if(vendor_id == 0x5A)//truly
+	{
+		pbt_buf = CTPM_FW;
+		fw_len = sizeof(CTPM_FW);
+		pr_err("update firmware size1:%d", fw_len);
+	}
+	else if(vendor_id == 0x5B)//mudong
+	{
+		pbt_buf = CTPM_FW2;
+		fw_len = sizeof(CTPM_FW2);
+		pr_err("update firmware size2:%d", fw_len);
+	}
+	else
+	{
+		pr_err("read vendor_id fail");
+		return -1;
+	}
+
+    if ((pbt_buf[fw_len - 8] ^ pbt_buf[fw_len - 6]) == 0xFF
+        && (pbt_buf[fw_len - 7] ^ pbt_buf[fw_len - 5]) == 0xFF
+        && (pbt_buf[fw_len - 3] ^ pbt_buf[fw_len - 4]) == 0xFF)
+    {
+
+		if(vendor_id != pbt_buf[fw_len-1])
+		{
+			pr_err("vendor_id dismatch, ic:%x, file:%x", vendor_id, pbt_buf[fw_len-1]);
+			return -1;
+		}
+
+        uc_host_fm_ver = pbt_buf[fw_len - 2];
+        pr_err("[FTS] uc_tp_fm_ver = %d.\n", uc_tp_fm_ver);
+        pr_err("[FTS] uc_host_fm_ver = %d.\n", uc_host_fm_ver);
+
+        if((uc_tp_fm_ver < uc_host_fm_ver)||(is_ic_update_crash==1))
+        {
+            rc = ft5x06_fw_upgrade_start(update_client, pbt_buf, fw_len);
+            if (rc != 0)
+            {
+                pr_err("[FTS]  upgrade failed rc = %d.\n", rc);
+            }
+            else
+            {
+                pr_err("[FTS] upgrade successfully.\n");
+            }
+        }
+    }
+
+    return rc;
+}
+#endif
+/*kangyan@uniscope_drv 20141125 add tp auto upgrade end*/
 static int ft5x06_fw_upgrade(struct device *dev, bool force)
 {
 	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
@@ -1957,7 +1980,31 @@ static int ft5x06_parse_dt(struct device *dev,
 				0, &pdata->irq_gpio_flags);
 	if (pdata->irq_gpio < 0)
 		return pdata->irq_gpio;
+#ifdef UNISCOPE_DRIVER_DTV //liguowei@uniscope 20140722 support siano dtv
+	pdata->wlt_gpio = of_get_named_gpio_flags(np, "focaltech,wlt-gpio",
+				0, &pdata->wlt_gpio_flags);
+	if (pdata->wlt_gpio < 0)
+		return pdata->wlt_gpio;
 
+	pdata->vcc18_gpio = of_get_named_gpio_flags(np, "focaltech,vcc18-gpio",
+				0, &pdata->vcc18_gpio_flags);
+	if (pdata->vcc18_gpio < 0)
+		return pdata->vcc18_gpio;
+
+	pdata->vccio_gpio = of_get_named_gpio_flags(np, "focaltech,vccio-gpio",
+				0, &pdata->vccio_gpio_flags);
+	if (pdata->vccio_gpio < 0)
+		return pdata->vccio_gpio;
+
+	pdata->dtvreset_gpio = of_get_named_gpio_flags(np, "focaltech,dtvreset-gpio",
+				0, &pdata->dtvreset_gpio_flags);
+	if (pdata->dtvreset_gpio < 0)
+		return pdata->dtvreset_gpio;
+	pdata->dtvinterrupt_gpio = of_get_named_gpio_flags(np, "focaltech,dtvinterrupt-gpio",
+				0, &pdata->dtvinterrupt_gpio_flags);
+	if (pdata->dtvinterrupt_gpio < 0)
+		return pdata->dtvinterrupt_gpio;
+#endif
 	pdata->fw_name = "ft_fw.bin";
 	rc = of_property_read_string(np, "focaltech,fw-name", &pdata->fw_name);
 	if (rc && (rc != -EINVAL)) {
@@ -2044,12 +2091,6 @@ static int ft5x06_parse_dt(struct device *dev,
 	pdata->ignore_id_check = of_property_read_bool(np,
 						"focaltech,ignore-id-check");
 
-	pdata->psensor_support = of_property_read_bool(np,
-						"focaltech,psensor-support");
-
-	pdata->gesture_support = of_property_read_bool(np,
-						"focaltech,gesture-support");
-
 	rc = of_property_read_u32(np, "focaltech,family-id", &temp_val);
 	if (!rc)
 		pdata->family_id = temp_val;
@@ -2081,20 +2122,110 @@ static int ft5x06_parse_dt(struct device *dev,
 }
 #endif
 
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20140703
+static ssize_t  log_tp_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, 2, "%d \n", uniscope_debug_flag);
+}
+
+static ssize_t log_tp_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	unsigned long  val = 0;
+	int rc =0;
+	
+	rc = kstrtoul(buf, 10, &val);
+	if (rc != 0)
+		return rc;
+	pr_err("%s code = %lu  \n",__func__,val);
+	if(val > 0)
+		uniscope_debug_flag = 1;
+	else
+		uniscope_debug_flag = 0;
+	return count;
+}
+
+static DEVICE_ATTR(log_tp, 0664, log_tp_show, log_tp_store);
+#endif
+
+#ifdef UNISCOPE_DRIVER_L700  //liguowei@uniscope.com 20141126
+static ssize_t  uni_chg_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, 2, "%d \n", uniscope_imobile_charger_flag);
+}
+
+static ssize_t uni_chg_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	unsigned long  val = 0;
+	int rc =0;
+	
+	rc = kstrtoul(buf, 10, &val);
+	if (rc != 0)
+		return rc;
+	pr_err("%s code = %lu  \n",__func__,val);
+	if(val > 0)
+		uniscope_imobile_charger_flag = 1;
+	else
+		uniscope_imobile_charger_flag = 0;
+	return count;
+}
+
+static DEVICE_ATTR(uni_chg, 0664, uni_chg_show, uni_chg_store);
+#endif
+/* Added by JZZ(zhizhang)@uniscope_drv 20140918 */
+#if defined(UNISCOPE_DRIVER_TP_AUTOMATCH_RESOLUTION)
+extern void get_mdss_dsi_panel_resolution(u32 *x, u32 *y);
+#endif
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes
+/*******************************************************
+Function:
+	Request interrupt.
+Input:
+	ts: private data.
+Output:
+	Executive outcomes.
+	0: succeed, -1: failed.
+*******************************************************/
+static int ft5x06_request_irq(struct ft5x06_ts_data *ts)
+{
+	int ret = 0;
+
+	ret = request_threaded_irq(ts->client->irq, NULL,
+			ft5x06_ts_interrupt,
+			IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+			ts->client->dev.driver->name, ts);
+	if (ret) {
+		ts->use_irq = false;
+		return ret;
+	} else {
+		ft5x06_irq_disable(ts);
+		ts->use_irq = true;
+		return ret;
+	}
+}
+#endif
+
 static int ft5x06_ts_probe(struct i2c_client *client,
 			   const struct i2c_device_id *id)
 {
 	struct ft5x06_ts_platform_data *pdata;
-	struct ft5x06_psensor_platform_data *psensor_pdata;
-	struct ft5x06_gesture_platform_data *gesture_pdata;
 	struct ft5x06_ts_data *data;
 	struct input_dev *input_dev;
-	struct input_dev *psensor_input_dev;
 	struct dentry *temp;
 	u8 reg_value;
 	u8 reg_addr;
 	int err, len;
 
+#if defined TPD_AUTO_UPGRADE
+    int ret_auto_upgrade = 0;
+    int i;
+    update_client = client;
+#endif
 	if (client->dev.of_node) {
 		pdata = devm_kzalloc(&client->dev,
 			sizeof(struct ft5x06_ts_platform_data), GFP_KERNEL);
@@ -2141,7 +2272,7 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	data->tch_data_len = FT_TCH_LEN(pdata->num_max_touches);
 	data->tch_data = devm_kzalloc(&client->dev,
 				data->tch_data_len, GFP_KERNEL);
-	if (!data->tch_data) {
+	if (!data) {
 		dev_err(&client->dev, "Not enough memory\n");
 		return -ENOMEM;
 	}
@@ -2159,6 +2290,12 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	input_dev->name = "ft5x06_ts";
 	input_dev->id.bustype = BUS_I2C;
 	input_dev->dev.parent = &client->dev;
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes	
+	/* For 2.6.39 & later use spin_lock_init(&ts->irq_lock)
+	 * For 2.6.39 & before, use ts->irq_lock = SPIN_LOCK_UNLOCKED
+	 */
+	spin_lock_init(&data->irq_lock);
+#endif
 
 	input_set_drvdata(input_dev, data);
 	i2c_set_clientdata(client, data);
@@ -2177,10 +2314,22 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	err = input_register_device(input_dev);
 	if (err) {
 		dev_err(&client->dev, "Input device registration failed\n");
-		input_free_device(input_dev);
-		return err;
+		goto free_inputdev;
+	}
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20140703
+	data->power_on = false;
+	err = ft5x06_power_init(data);
+	if (err) {
+		dev_err(&client->dev, "ft5x06 power init failed\n");
+			goto unreg_inputdev;
 	}
 
+	err = ft5x06_power_on(data);
+	if (err) {
+		dev_err(&client->dev, "ft5x06 power on failed\n");
+			goto pwr_deinit;
+	}
+#else
 	if (pdata->power_init) {
 		err = pdata->power_init(true);
 		if (err) {
@@ -2208,29 +2357,177 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 			goto pwr_deinit;
 		}
 	}
-
+#endif
 	err = ft5x06_ts_pinctrl_init(data);
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes
 	if (!err && data->ts_pinctrl) {
-		/*
-		 * Pinctrl handle is optional. If pinctrl handle is found
-		 * let pins to be configured in active state. If not
-		 * found continue further without error.
-		 */
 		err = pinctrl_select_state(data->ts_pinctrl,
 					data->pinctrl_state_active);
 		if (err < 0) {
 			dev_err(&client->dev,
 				"failed to select pin to active state");
+			goto pinctrl_deinit;
+		}
+	} else {
+			goto pwr_off;
+	}
+
+	if (gpio_is_valid(pdata->irq_gpio)) {
+		err = gpio_request(pdata->irq_gpio, "ft5x06_irq_gpio");
+		if (err) {
+			dev_err(&client->dev, "irq gpio request failed");
+			goto err_gpio_req;
+		}
+		err = gpio_direction_input(pdata->irq_gpio);
+		if (err) {
+			dev_err(&client->dev,
+				"set_direction for irq gpio failed\n");
+			goto free_irq_gpio;
 		}
 	}
+#endif
+	if (gpio_is_valid(pdata->reset_gpio)) {
+		err = gpio_request(pdata->reset_gpio, "ft5x06_reset_gpio");
+		if (err) {
+			dev_err(&client->dev, "reset gpio request failed");
+			goto free_irq_gpio;
+		}
 
-	err = ft5x06_gpio_configure(data, true);
-	if (err < 0) {
-		dev_err(&client->dev,
-			"Failed to configure the gpios\n");
-		goto err_gpio_req;
+		err = gpio_direction_output(pdata->reset_gpio, 0);
+		if (err) {
+			dev_err(&client->dev,
+				"set_direction for reset gpio failed\n");
+			goto free_reset_gpio;
+		}
+		msleep(data->pdata->hard_rst_dly);
+		gpio_set_value_cansleep(data->pdata->reset_gpio, 1);
 	}
 
+#ifdef UNISCOPE_DRIVER_DTV //liguowei@uniscope 20140722 support siano dtv
+if (gpio_is_valid(pdata->wlt_gpio)) {
+		err = gpio_request(pdata->wlt_gpio, "ft5x06_wlt_gpio");
+		if (err) {
+			dev_err(&client->dev, "wlt gpio request failed");
+			goto free_irq_gpio;
+		}
+
+		err = gpio_direction_output(pdata->wlt_gpio, 0);
+		if (err) {
+			dev_err(&client->dev,
+				"set_direction for reset gpio failed\n");
+			goto free_wlt_gpio;
+		}
+		//leep(data->pdata->hard_rst_dly);
+		gpio_set_value_cansleep(data->pdata->wlt_gpio, 0);
+	}
+
+if (gpio_is_valid(pdata->vcc18_gpio)) {
+		err = gpio_request(pdata->vcc18_gpio, "ft5x06_vcc18_gpio");
+		if (err) {
+			dev_err(&client->dev, "wlt gpio request failed");
+			goto free_irq_gpio;
+		}
+
+		err = gpio_direction_output(pdata->vcc18_gpio, 0);
+		if (err) {
+			dev_err(&client->dev,
+				"set_direction for reset gpio failed\n");
+			goto free_vcc18_gpio;
+		}
+		//leep(data->pdata->hard_rst_dly);
+		gpio_set_value_cansleep(data->pdata->vcc18_gpio, 0);
+	}
+if (gpio_is_valid(pdata->vccio_gpio)) {
+		err = gpio_request(pdata->vccio_gpio, "ft5x06_vccio_gpio");
+		if (err) {
+			dev_err(&client->dev, "wlt gpio request failed");
+			goto free_irq_gpio;
+		}
+
+		err = gpio_direction_output(pdata->vccio_gpio, 0);
+		if (err) {
+			dev_err(&client->dev,
+				"set_direction for reset gpio failed\n");
+			goto free_vccio_gpio;
+		}
+		//leep(data->pdata->hard_rst_dly);
+		gpio_set_value_cansleep(data->pdata->vccio_gpio, 0);
+	}
+if (gpio_is_valid(pdata->dtvreset_gpio)) {
+		err = gpio_request(pdata->dtvreset_gpio, "ft5x06_dtvreset_gpio");
+		if (err) {
+			dev_err(&client->dev, "wlt gpio request failed");
+			goto free_irq_gpio;
+		}
+
+		err = gpio_direction_output(pdata->dtvreset_gpio, 0);
+		if (err) {
+			dev_err(&client->dev,
+				"set_direction for reset gpio failed\n");
+			goto free_dtvreset_gpio;
+		}
+		//msleep(data->pdata->hard_rst_dly);
+		gpio_set_value_cansleep(data->pdata->dtvreset_gpio, 0);
+	}
+if (gpio_is_valid(pdata->dtvinterrupt_gpio)) {
+		err = gpio_request(pdata->dtvinterrupt_gpio, "ft5x06_dtvinterrupt_gpio");
+		if (err) {
+			dev_err(&client->dev, "dtvinterrupt gpio request failed");
+			goto free_irq_gpio;
+		}
+
+		err = gpio_direction_output(pdata->dtvinterrupt_gpio, 0);
+		if (err) {
+			dev_err(&client->dev,
+				"set_direction for dtvinterrupt gpio  failed\n");
+			goto free_dtvinterrupt_gpio;
+		}
+		//msleep(data->pdata->hard_rst_dly);
+		gpio_set_value_cansleep(data->pdata->dtvinterrupt_gpio, 1);
+	}
+
+  if(gpio_is_valid(971)) //gpio69 connect to SD gpio_cd gpio38
+    {
+        gpio_set_value(971,1);
+        dev_err(&client->dev,  "dtvinterrupt_gpio   gpio \n");
+    }
+#if 0 //byj 
+
+dev_err(&client->dev, "zzzzzz   pdata->reset_gpio = %d \n", pdata->irq_gpio); //13   -915
+
+     /*byj */
+    if(gpio_is_valid(938)) //vcc_1.8
+    {
+    gpio_set_value(938,1);
+dev_err(&client->dev, "zzzzzz    938\n");
+    }
+    
+ 
+    if(gpio_is_valid(953)) //vcc_1.8
+    {
+    gpio_set_value(953,1);
+dev_err(&client->dev,  "zzzzzz    953\n");
+    }
+   
+    
+    if(gpio_is_valid(954)) //vcc_1.8
+    {
+    gpio_set_value(954,1);
+dev_err(&client->dev,  "zzzzzz    954\n");
+    }
+    
+    if(gpio_is_valid(1020)) //vcc_1.8
+    {
+        gpio_set_value(1020,1);
+dev_err(&client->dev, "zzzzzz    1020 \n");
+        gpio_set_value(1020,0);
+            msleep(50);
+        gpio_set_value(1020,1);
+    }
+
+#endif
+
+#endif
 	/* make sure CTP already finish startup process */
 	msleep(data->pdata->soft_rst_dly);
 
@@ -2239,129 +2536,68 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	err = ft5x06_i2c_read(client, &reg_addr, 1, &reg_value, 1);
 	if (err < 0) {
 		dev_err(&client->dev, "version read failed");
-		goto free_gpio;
+		goto free_reset_gpio;
 	}
-
+	/* Added by JZZ(zhizhang)@uniscope_drv 20140918 begin */
+#if defined(UNISCOPE_DRIVER_TP_AUTOMATCH_RESOLUTION)
+	{
+		u32 disp_x=0;
+		u32 disp_y=0;
+		get_mdss_dsi_panel_resolution(&disp_x,&disp_y);
+		pdata->x_max = disp_x;
+		pdata->y_max = disp_y;	
+		input_set_abs_params(input_dev, ABS_MT_POSITION_X, pdata->x_min,
+			     pdata->x_max, 0, 0);
+		input_set_abs_params(input_dev, ABS_MT_POSITION_Y, pdata->y_min,
+			     pdata->y_max, 0, 0);	
+	}
+#endif
+	/* Added by JZZ(zhizhang)@uniscope_drv 20140918 end */
 	dev_info(&client->dev, "Device ID = 0x%x\n", reg_value);
 
 	if ((pdata->family_id != reg_value) && (!pdata->ignore_id_check)) {
 		dev_err(&client->dev, "%s:Unsupported controller\n", __func__);
-		goto free_gpio;
+		goto free_reset_gpio;
 	}
 
 	data->family_id = pdata->family_id;
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes
+	err = ft5x06_request_irq(data);
+	if (err)
+		{
+		dev_err(&client->dev, "ft5x06 request irq failed %d.\n", err);
+		goto free_reset_gpio;
+	}
+	else
+		dev_err(&client->dev, "ft5x06 works in interrupt mode.\n");
 
-	err = request_threaded_irq(client->irq, NULL,
-				ft5x06_ts_interrupt,
-	/*
-	* the interrupt trigger mode will be set in Device Tree with property
-	* "interrupts", so here we just need to set the flag IRQF_ONESHOT
-	*/
-				IRQF_ONESHOT,
-				client->dev.driver->name, data);
+       if (data->use_irq)
+		     ft5x06_irq_enable(data);	
+#endif
+
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20140703
+      ft5x06_wq = create_singlethread_workqueue("ft5x06_wq");
+      INIT_WORK(&data->work, ft5x0x_read_Touchdata_Work);	
+
+	err = device_create_file(&client->dev, &dev_attr_log_tp);
 	if (err) {
-		dev_err(&client->dev, "request irq failed\n");
-		goto free_gpio;
-	}
-
-	if (data->pdata->psensor_support && data->pdata->gesture_support) {
-		dev_err(&client->dev,
-			"Unsupport psensor & gesture at the same time\n");
+		dev_err(&client->dev, "sys file creation failed\n");
 		goto irq_free;
-	}
-	if (ft5x06_psensor_support_enabled() && data->pdata->psensor_support) {
-		device_init_wakeup(&client->dev, 1);
-		psensor_pdata = devm_kzalloc(&client->dev,
-				sizeof(struct ft5x06_psensor_platform_data),
-				GFP_KERNEL);
-		if (!psensor_pdata) {
-			dev_err(&client->dev, "Failed to allocate memory\n");
-			goto irq_free;
-		}
-		data->psensor_pdata = psensor_pdata;
+	}  
+#endif
 
-		psensor_input_dev = input_allocate_device();
-		if (!psensor_input_dev) {
-			dev_err(&data->client->dev,
-				"Failed to allocate device\n");
-			goto free_psensor_pdata;
-		}
-
-		__set_bit(EV_ABS, psensor_input_dev->evbit);
-		input_set_abs_params(psensor_input_dev,
-					ABS_DISTANCE, 0, 1, 0, 0);
-		psensor_input_dev->name = "proximity";
-		psensor_input_dev->id.bustype = BUS_I2C;
-		psensor_input_dev->dev.parent = &data->client->dev;
-		data->psensor_pdata->input_psensor_dev = psensor_input_dev;
-
-		err = input_register_device(psensor_input_dev);
-		if (err) {
-			dev_err(&data->client->dev,
-				"Unable to register device, err=%d\n", err);
-			goto free_psensor_input_dev;
-		}
-
-		psensor_pdata->ps_cdev = sensors_proximity_cdev;
-		psensor_pdata->ps_cdev.sensors_enable =
-					ft5x06_psensor_enable_set;
-		psensor_pdata->data = data;
-
-		err = sensors_classdev_register(&psensor_input_dev->dev,
-						&psensor_pdata->ps_cdev);
-		if (err)
-			goto unregister_psensor_input_device;
-	}
-
-	if (ft5x06_gesture_support_enabled() && data->pdata->gesture_support) {
-		device_init_wakeup(&client->dev, 1);
-		gesture_pdata = devm_kzalloc(&client->dev,
-				sizeof(struct ft5x06_gesture_platform_data),
-				GFP_KERNEL);
-		if (!gesture_pdata) {
-			dev_err(&client->dev, "Failed to allocate memory\n");
-			goto free_psensor_class_sysfs;
-		}
-		data->gesture_pdata = gesture_pdata;
-		gesture_pdata->data = data;
-
-		gesture_pdata->gesture_class =
-					class_create(THIS_MODULE, "gesture");
-		if (IS_ERR(gesture_pdata->gesture_class)) {
-			err = PTR_ERR(gesture_pdata->gesture_class);
-			dev_err(&client->dev, "Failed to create class.\n");
-			goto free_gesture_pdata;
-		}
-
-		gesture_pdata->dev = device_create(gesture_pdata->gesture_class,
-				NULL, 0, NULL, "gesture_ft5x06");
-		if (IS_ERR(gesture_pdata->dev)) {
-			err = PTR_ERR(gesture_pdata->dev);
-			dev_err(&client->dev, "Failed to create device.\n");
-			goto free_gesture_class;
-		}
-
-		dev_set_drvdata(gesture_pdata->dev, data);
-		err = device_create_file(gesture_pdata->dev,
-					&dev_attr_enable);
-		if (err) {
-			dev_err(gesture_pdata->dev,
-					"sys file creation failed\n");
-			goto free_gesture_dev;
-		}
-		err = device_create_file(gesture_pdata->dev,
-					&dev_attr_pocket);
-		if (err) {
-			dev_err(gesture_pdata->dev,
-					"sys file creation failed\n");
-			goto free_enable_sys;
-		}
-	}
+#ifdef UNISCOPE_DRIVER_L700  //liguowei@uniscope.com 20141126
+	err = device_create_file(&client->dev, &dev_attr_uni_chg);
+	if (err) {
+		dev_err(&client->dev, "sys file creation failed\n");
+		goto irq_free;
+	}  
+#endif
 
 	err = device_create_file(&client->dev, &dev_attr_fw_name);
 	if (err) {
 		dev_err(&client->dev, "sys file creation failed\n");
-		goto free_pocket_sys;
+		goto irq_free;
 	}
 
 	err = device_create_file(&client->dev, &dev_attr_update_fw);
@@ -2461,7 +2697,25 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	data->early_suspend.resume = ft5x06_ts_late_resume;
 	register_early_suspend(&data->early_suspend);
 #endif
-
+/*kangyan@uniscope_drv 20141125 add tp auto upgrade begin*/
+#if defined TPD_AUTO_UPGRADE
+    {
+        pr_err("********************Enter CTP Auto Upgrade********************\n");
+        msleep(50);
+        i = 0;
+        do
+        {
+            ret_auto_upgrade = fts_ctpm_fw_upgrade_with_i_file(data);
+            i++;
+            if(ret_auto_upgrade < 0)
+            {
+                pr_err(" ctp upgrade fail err = %d \n",ret_auto_upgrade);
+            }
+        }
+        while((ret_auto_upgrade < 0)&&(i<3));
+    }
+#endif
+/*kangyan@uniscope_drv 20141125 add tp auto upgrade end*/
 	return 0;
 
 free_debug_dir:
@@ -2472,51 +2726,17 @@ free_update_fw_sys:
 	device_remove_file(&client->dev, &dev_attr_update_fw);
 free_fw_name_sys:
 	device_remove_file(&client->dev, &dev_attr_fw_name);
-free_pocket_sys:
-	if (ft5x06_gesture_support_enabled() && data->pdata->gesture_support)
-		device_remove_file(&client->dev, &dev_attr_pocket);
-free_enable_sys:
-	if (ft5x06_gesture_support_enabled() && data->pdata->gesture_support)
-		device_remove_file(&client->dev, &dev_attr_enable);
-free_gesture_dev:
-	if (ft5x06_gesture_support_enabled() && data->pdata->gesture_support)
-		device_destroy(gesture_pdata->gesture_class, 0);
-free_gesture_class:
-	if (ft5x06_gesture_support_enabled() && data->pdata->gesture_support)
-		class_destroy(gesture_pdata->gesture_class);
-free_gesture_pdata:
-	if (ft5x06_gesture_support_enabled() && data->pdata->gesture_support) {
-		devm_kfree(&client->dev, gesture_pdata);
-		data->gesture_pdata = NULL;
-	}
-free_psensor_class_sysfs:
-	if (ft5x06_psensor_support_enabled() && data->pdata->psensor_support)
-		sensors_classdev_unregister(&psensor_pdata->ps_cdev);
-unregister_psensor_input_device:
-	if (ft5x06_psensor_support_enabled() && data->pdata->psensor_support)
-		input_unregister_device(data->psensor_pdata->input_psensor_dev);
-free_psensor_input_dev:
-	if (ft5x06_psensor_support_enabled() && data->pdata->psensor_support)
-		input_free_device(data->psensor_pdata->input_psensor_dev);
-free_psensor_pdata:
-	if (ft5x06_psensor_support_enabled() && data->pdata->psensor_support) {
-		devm_kfree(&client->dev, psensor_pdata);
-		data->psensor_pdata = NULL;
-	}
 irq_free:
-	if ((ft5x06_psensor_support_enabled() &&
-		data->pdata->psensor_support) ||
-		(ft5x06_gesture_support_enabled() &&
-		data->pdata->gesture_support))
-
-		device_init_wakeup(&client->dev, 0);
 	free_irq(client->irq, data);
-free_gpio:
+free_reset_gpio:
 	if (gpio_is_valid(pdata->reset_gpio))
 		gpio_free(pdata->reset_gpio);
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes
+free_irq_gpio:
 	if (gpio_is_valid(pdata->irq_gpio))
 		gpio_free(pdata->irq_gpio);
 err_gpio_req:
+pinctrl_deinit:
 	if (data->ts_pinctrl) {
 		if (IS_ERR_OR_NULL(data->pinctrl_state_release)) {
 			devm_pinctrl_put(data->ts_pinctrl);
@@ -2528,6 +2748,31 @@ err_gpio_req:
 				pr_err("failed to select relase pinctrl state\n");
 		}
 	}
+#endif
+#ifdef UNISCOPE_DRIVER_DTV //liguowei@uniscope 20140722 support siano dtv
+free_wlt_gpio:
+	if (gpio_is_valid(pdata->wlt_gpio))
+		gpio_free(pdata->wlt_gpio);
+free_vcc18_gpio:
+	if (gpio_is_valid(pdata->vcc18_gpio))
+		gpio_free(pdata->vcc18_gpio);
+free_vccio_gpio:
+	if (gpio_is_valid(pdata->vccio_gpio))
+		gpio_free(pdata->vccio_gpio);
+free_dtvreset_gpio:
+	if (gpio_is_valid(pdata->dtvreset_gpio))
+		gpio_free(pdata->dtvreset_gpio);
+free_dtvinterrupt_gpio:
+	if (gpio_is_valid(pdata->dtvinterrupt_gpio))
+		gpio_free(pdata->dtvinterrupt_gpio);
+#endif
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20140703
+pwr_off:
+		ft5x06_power_on(data);
+pwr_deinit:
+		ft5x06_power_init(data);
+#else
+pwr_off:
 	if (pdata->power_on)
 		pdata->power_on(false);
 	else
@@ -2537,8 +2782,12 @@ pwr_deinit:
 		pdata->power_init(false);
 	else
 		ft5x06_power_init(data, false);
+#endif
 unreg_inputdev:
 	input_unregister_device(input_dev);
+	input_dev = NULL;
+free_inputdev:
+	input_free_device(input_dev);
 	return err;
 }
 
@@ -2546,25 +2795,6 @@ static int ft5x06_ts_remove(struct i2c_client *client)
 {
 	struct ft5x06_ts_data *data = i2c_get_clientdata(client);
 	int retval;
-
-	if (ft5x06_gesture_support_enabled() && data->pdata->gesture_support) {
-		device_init_wakeup(&client->dev, 0);
-		device_remove_file(&client->dev, &dev_attr_pocket);
-		device_remove_file(&client->dev, &dev_attr_enable);
-		device_destroy(data->gesture_pdata->gesture_class, 0);
-		class_destroy(data->gesture_pdata->gesture_class);
-		devm_kfree(&client->dev, data->gesture_pdata);
-		data->gesture_pdata = NULL;
-	}
-
-	if (ft5x06_psensor_support_enabled() && data->pdata->psensor_support) {
-
-		device_init_wakeup(&client->dev, 0);
-		sensors_classdev_unregister(&data->psensor_pdata->ps_cdev);
-		input_unregister_device(data->psensor_pdata->input_psensor_dev);
-		devm_kfree(&client->dev, data->psensor_pdata);
-		data->psensor_pdata = NULL;
-	}
 
 	debugfs_remove_recursive(data->dir);
 	device_remove_file(&client->dev, &dev_attr_force_update_fw);
@@ -2584,7 +2814,20 @@ static int ft5x06_ts_remove(struct i2c_client *client)
 
 	if (gpio_is_valid(data->pdata->irq_gpio))
 		gpio_free(data->pdata->irq_gpio);
+#ifdef UNISCOPE_DRIVER_DTV //liguowei@uniscope 20140722 support siano dtv
+	if (gpio_is_valid(data->pdata->wlt_gpio))
+		gpio_free(data->pdata->wlt_gpio);
+        if (gpio_is_valid(data->pdata->vcc18_gpio))
+		gpio_free(data->pdata->vcc18_gpio);
+        if (gpio_is_valid(data->pdata->vccio_gpio))
+		gpio_free(data->pdata->vccio_gpio);
+        if (gpio_is_valid(data->pdata->dtvreset_gpio))
+		gpio_free(data->pdata->dtvreset_gpio);
+        if (gpio_is_valid(data->pdata->dtvinterrupt_gpio))
+		gpio_free(data->pdata->dtvinterrupt_gpio);
+#endif
 
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20150107 tp can not work sometimes
 	if (data->ts_pinctrl) {
 		if (IS_ERR_OR_NULL(data->pinctrl_state_release)) {
 			devm_pinctrl_put(data->ts_pinctrl);
@@ -2592,11 +2835,17 @@ static int ft5x06_ts_remove(struct i2c_client *client)
 		} else {
 			retval = pinctrl_select_state(data->ts_pinctrl,
 					data->pinctrl_state_release);
-			if (retval < 0)
+		if (retval < 0)
 				pr_err("failed to select release pinctrl state\n");
-		}
 	}
+	}
+#endif
 
+#ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20140703
+	ft5x06_power_on(data);
+
+	ft5x06_power_init(data);
+#else
 	if (data->pdata->power_on)
 		data->pdata->power_on(false);
 	else
@@ -2606,7 +2855,7 @@ static int ft5x06_ts_remove(struct i2c_client *client)
 		data->pdata->power_init(false);
 	else
 		ft5x06_power_init(data, false);
-
+#endif
 	input_unregister_device(data->input_dev);
 
 	return 0;

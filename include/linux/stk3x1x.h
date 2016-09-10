@@ -1,13 +1,14 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /*
  *
  * Id: stk3x1x.h
  *
- * Copyright (C) 2012 Lex Hsieh     <lex_hsieh@sitronix.com.tw>
+ * Copyright (C) 2012-2014 Lex Hsieh     <lex_hsieh@sitronix.com.tw>
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file COPYING in the main directory of this archive for
  * more details.
- *
+ * 
  */
 #ifndef __STK3X1X_H__
 #define __STK3X1X_H__

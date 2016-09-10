@@ -1,3 +1,4 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1587,6 +1588,9 @@ static int prepare_reported_soc(struct qpnp_bms_chip *chip)
 #define SOC_CATCHUP_SEC_PER_PERCENT	60
 #define MAX_CATCHUP_SOC	(SOC_CATCHUP_SEC_MAX / SOC_CATCHUP_SEC_PER_PERCENT)
 #define SOC_CHANGE_PER_SEC		5
+#ifdef UNISCOPE_DRIVER_QC8909 //liguowei@uniscope.com //  Jason charge 20140901
+ bool uni_charger_status_using_ft5x06=0;
+#endif
 static int report_vm_bms_soc(struct qpnp_bms_chip *chip)
 {
 	int soc, soc_change, batt_temp, rc;
@@ -1600,6 +1604,9 @@ static int report_vm_bms_soc(struct qpnp_bms_chip *chip)
 	calculate_delta_time(&last_change_sec, &time_since_last_change_sec);
 
 	charging = is_battery_charging(chip);
+#ifdef UNISCOPE_DRIVER_QC8909 //liguowei@uniscope.com //  Jason charge 20140901
+	   uni_charger_status_using_ft5x06=charging;
+#endif
 
 	pr_debug("charging=%d last_soc=%d last_soc_unbound=%d\n",
 		charging, chip->last_soc, chip->last_soc_unbound);

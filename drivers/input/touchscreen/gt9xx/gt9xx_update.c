@@ -1,3 +1,4 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /* drivers/input/touchscreen/gt9xx_update.c
  *
  * 2010 - 2012 Goodix Technology.
@@ -81,6 +82,8 @@ struct st_update_msg {
 	u32 fw_len;
 	struct st_fw_head  ic_fw_msg;
 };
+
+struct i2c_client  *i2c_connect_client;
 
 static struct st_update_msg update_msg;
 u16 show_len;

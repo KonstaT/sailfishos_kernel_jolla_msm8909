@@ -1894,7 +1894,7 @@ composite_suspend(struct usb_gadget *gadget)
 
 	cdev->suspended = 1;
 
-	usb_gadget_vbus_draw(gadget, 2);
+	usb_gadget_vbus_draw(gadget, 500);  //liguowei@uni_drv 20160226 it can not charging by usb on win8 pc
 }
 
 static void

@@ -2411,7 +2411,9 @@ static int ice40_spi_probe(struct spi_device *spi)
 	 * Enable all our trace points. Useful in debugging card
 	 * enumeration issues.
 	 */
+#ifdef CONFIG_TRACING
 	ret = trace_set_clr_event(__stringify(TRACE_SYSTEM), NULL, 1);
+#endif
 	if (ret < 0)
 		pr_err("fail to enable trace points with %d\n", ret);
 

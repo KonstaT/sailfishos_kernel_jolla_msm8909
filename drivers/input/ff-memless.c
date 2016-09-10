@@ -38,10 +38,11 @@ MODULE_AUTHOR("Anssi Hannula <anssi.hannula@gmail.com>");
 MODULE_DESCRIPTION("Force feedback support for memoryless devices");
 
 /* Number of effects handled with memoryless devices */
-#define FF_MEMLESS_EFFECTS	16
+#define FF_MEMLESS_EFFECTS	64
 
 /* Envelope update interval in ms */
-#define FF_ENVELOPE_INTERVAL	50
+static int ff_envelope_interval = 10;
+module_param(ff_envelope_interval, int, S_IWUSR | S_IRUGO);
 
 #define FF_EFFECT_STARTED	0
 #define FF_EFFECT_PLAYING	1
@@ -96,7 +97,7 @@ static unsigned long calculate_next_time(struct ml_effect_state *state)
 			msecs_to_jiffies(envelope->attack_length);
 		if (time_before(state->adj_at, attack_stop))
 			return state->adj_at +
-					msecs_to_jiffies(FF_ENVELOPE_INTERVAL);
+					msecs_to_jiffies(ff_envelope_interval);
 	}
 
 	if (state->effect->replay.length) {
@@ -110,7 +111,7 @@ static unsigned long calculate_next_time(struct ml_effect_state *state)
 
 			/* already fading, advance to next checkpoint */
 			next_fade = state->adj_at +
-					msecs_to_jiffies(FF_ENVELOPE_INTERVAL);
+					msecs_to_jiffies(ff_envelope_interval);
 			if (time_before(next_fade, state->stop_at))
 				return next_fade;
 		}

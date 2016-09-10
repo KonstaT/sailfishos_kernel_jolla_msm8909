@@ -915,7 +915,7 @@ first_try:
 				ret = -ENODEV;
 			spin_unlock_irq(&epfile->ffs->eps_lock);
 			if (read && ret > 0) {
-				if (len != MAX_BUF_LEN && ret < len)
+				if (len < MAX_BUF_LEN && ret < len)
 					pr_err("less data(%zd) recieved than intended length(%zu)\n",
 								ret, len);
 				if (ret > len) {

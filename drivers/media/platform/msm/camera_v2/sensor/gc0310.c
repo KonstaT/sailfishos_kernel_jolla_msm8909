@@ -1,3 +1,4 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -30,6 +31,18 @@ DEFINE_MSM_MUTEX(gc0310_mut);
 static struct msm_sensor_ctrl_t gc0310_s_ctrl;
 
 static struct msm_sensor_power_setting gc0310_power_setting[] = {
+	{
+		.seq_type = SENSOR_GPIO,
+	    .seq_val = SENSOR_GPIO_VANA,
+	    .config_val = GPIO_OUT_LOW,
+	    .delay = 1,
+	 },
+  	 {
+	    .seq_type = SENSOR_GPIO,
+	    .seq_val = SENSOR_GPIO_VANA,
+	    .config_val = GPIO_OUT_HIGH,
+	    .delay = 1,
+	},  	
 	{
 		.seq_type = SENSOR_GPIO,
 		.seq_val = SENSOR_GPIO_STANDBY,
@@ -82,15 +95,15 @@ static struct msm_camera_i2c_reg_array gc0310_recommend_setting_list[] = {
 	{0xfc, 0x0e},
 	{0xf2, 0x80},
 	{0xf3, 0x00},
-	{0xf7, 0x1f},
-	{0xf8, 0x03},
-	{0xf9, 0x8e},
+	{0xf7,0x1b}, 
+	{0xf8,0x04},
+	{0xf9,0x8e}, 
 	{0xfa, 0x11},
 	{0x00, 0x2f},
 	{0x01, 0x0f},
 	{0x02, 0x04},
-	{0x03, 0x02},
-	{0x04, 0x58},
+	{0x03,0x03},
+	{0x04,0x50},
 	{0x05, 0x00},
 	{0x06, 0xde},
 	{0x07, 0x00},
@@ -116,20 +129,21 @@ static struct msm_camera_i2c_reg_array gc0310_recommend_setting_list[] = {
 	{0x23, 0x04},
 	{0x24, 0x16},
 	{0x34, 0x20},
-	{0x26, 0x23},
-	{0x28, 0xff},
-	{0x29, 0x00},
-	{0x33, 0x10},
-	{0x37, 0x20},
-	{0x47, 0x80},
-	{0x4e, 0x66},
-	{0xa8, 0x02},
-	{0xa9, 0x80},
-	{0x40, 0xdf},
-	{0x41, 0x25},
-	{0x42, 0xcf},
-	{0x44, 0x02},
-	{0x46, 0x06},
+	{0x26,0x23}, 
+	{0x28,0xff}, 
+	{0x29,0x00}, 
+	{0x33,0x10}, 
+	{0x37,0x20}, 
+	{0x38,0x10},
+	{0x47,0x80}, 
+	{0x4e,0x66}, 
+	{0xa8,0x02}, 
+	{0xa9,0x80},
+	{0x40,0xff}, 
+	{0x41,0x21}, 
+	{0x42,0xcf}, 
+	{0x44,0x02}, 
+	{0x46,0x02}, 
 	{0x4a, 0x11},
 	{0x4b, 0x01},
 	{0x4c, 0x20},
@@ -147,10 +161,13 @@ static struct msm_camera_i2c_reg_array gc0310_recommend_setting_list[] = {
 	{0x77, 0x74},
 	{0x78, 0x40},
 	{0x79, 0x5f},
-	{0x80, 0x00},
-	{0x82, 0x08},
-	{0x83, 0x0b},
-	{0x89, 0xf0},
+                                 
+	///////////////////////////////////////////////// 
+	///////////////////   DNDD  /////////////////////
+	///////////////////////////////////////////////// 
+	{0x82,0x1c}, //14
+	{0x83,0x0f},//0b
+	{0x89,0xf0},
 	{0x8f, 0xaa},
 	{0x90, 0x8c},
 	{0x91, 0x90},
@@ -170,9 +187,12 @@ static struct msm_camera_i2c_reg_array gc0310_recommend_setting_list[] = {
 	{0xa5, 0x30},
 	{0xaa, 0x10},
 	{0xac, 0x22},
-	{0xad, 0x28},
-	{0xbf, 0x06},
-	{0xc0, 0x12},
+	/////////////////////////////////////////////////
+	///////////////////   GAMMA   ///////////////////
+	/////////////////////////////////////////////////
+	{0xfe,0x00},//default
+	{0xbf,0x08},
+	{0xc0,0x16},
 	{0xc1, 0x28},
 	{0xc2, 0x41},
 	{0xc3, 0x5a},
@@ -188,48 +208,40 @@ static struct msm_camera_i2c_reg_array gc0310_recommend_setting_list[] = {
 	{0xcd, 0xf1},
 	{0xce, 0xfa},
 	{0xcf, 0xff},
-	{0xd0, 0x40},
-	{0xd1, 0x30},
-	{0xd2, 0x30},
-	{0xd3, 0x40},
-	{0xfe, 0x00},
-	{0xd6, 0xf2},
-	{0xd7, 0x1b},
-	{0xdd, 0x72},
-	{0xde, 0xe5},
-	{0xe4, 0x86},
-	{0xe5, 0x30},
-	{0xfe, 0x01},
-	{0x05, 0x30},
-	{0x06, 0x75},
-	{0x07, 0x40},
-	{0x08, 0xb0},
-	{0x0a, 0xc5},
-	{0x0b, 0x11},
-	{0x0c, 0x00},
-	{0x12, 0x52},
-	{0x13, 0x34},
-	{0x18, 0x95},
-	{0x19, 0x96},
-	{0x1e, 0x41},
-	{0x1f, 0x40},
-	{0x20, 0x40},
-	{0x25, 0x00},
-	{0x26, 0x83},
-	{0x27, 0x02},
-	{0x28, 0x0c},
-	{0x29, 0x03},
-	{0x2a, 0x12},
-	{0x2b, 0x04},
-	{0x2c, 0x18},
-	{0x2d, 0x0a},
-	{0x2e, 0x3c},
-	{0x3c, 0x20},
-	{0x3e, 0x40},
-	{0x3f, 0x57},
-	{0x40, 0x7b},
-	{0x03, 0x60},
-	{0x44, 0x02},
+	/////////////////////////////////////////////////
+	///////////////////   YCP  //////////////////////
+	/////////////////////////////////////////////////
+	{0xd0,0x40}, 
+	{0xd1,0x34}, 
+	{0xd2,0x34}, 
+	{0xd3,0x40}, 
+	{0xd6,0xf2}, 
+	{0xd7,0x1b}, 
+	{0xd8,0x18}, 
+	{0xdd,0x03}, 
+                                 
+	/////////////////////////////////////////////////
+	////////////////////   AEC   ////////////////////
+	/////////////////////////////////////////////////
+	{0xfe,0x01},
+	{0x05,0x30},
+	{0x06,0x75},
+	{0x07,0x40},
+	{0x08,0xb0},
+	{0x0a,0xc5},
+	{0x0b,0x11},
+	{0x0c,0x00},
+	{0x12,0x52},
+	{0x13,0x48},
+	{0x18,0x95},
+	{0x19,0x96},
+	{0x1f,0x20},
+	{0x20,0xc0}, 
+	{0x3e,0x40}, 
+	{0x3f,0x57}, 
+	{0x40,0x7d}, 
+	{0x03,0x60}, 
+	{0x44,0x02}, 
 	{0x1c, 0x91},
 	{0x21, 0x15},
 	{0x50, 0x80},
@@ -312,34 +324,61 @@ static struct msm_camera_i2c_reg_array gc0310_recommend_setting_list[] = {
 	{0x8f, 0x05},
 	{0xb8, 0xb8},
 	{0xb9, 0xb1},
-	{0xfe, 0x01},
-	{0xd0, 0x38},
-	{0xd1, 0xf7},
-	{0xd2, 0x03},
-	{0xd3, 0xf0},
-	{0xd4, 0x40},
-	{0xd5, 0xf5},
-	{0xd6, 0x3f},
-	{0xd7, 0xf8},
-	{0xd8, 0x05},
-	{0xd9, 0x08},
-	{0xda, 0x38},
-	{0xdb, 0xe9},
-	{0xfe, 0x01},
-	{0x76, 0x80},
-	{0xc1, 0x3c},
-	{0xc2, 0x50},
-	{0xc3, 0x00},
-	{0xc4, 0x68},
-	{0xc5, 0x3a},
-	{0xc6, 0x3a},
-	{0xc7, 0x28},
-	{0xc8, 0x18},
-	{0xc9, 0x18},
-	{0xdc, 0x20},
-	{0xdd, 0x10},
-	{0xdf, 0x00},
-	{0xde, 0x00},
+	/////////////////////////////////////////////////
+	////////////////////  CC ////////////////////////
+	/////////////////////////////////////////////////
+	{0xfe,0x01},
+   /*                              
+	{0xd0,0x38},//skin red
+	{0xd1,0x00},
+	{0xd2,0x02},
+	{0xd3,0x04},
+	{0xd4,0x38},
+	{0xd5,0x12},
+   */                              
+       
+	{0xd0,0x38},//skin white
+	{0xd1,0xfd},
+	{0xd2,0x06},
+	{0xd3,0xf0},
+	{0xd4,0x40},
+	{0xd5,0x08},              
+
+	
+/*                       
+	{0xd0,0x38},//guodengxiang
+	{0xd1,0xf8},
+	{0xd2,0x06},
+	{0xd3,0xfd},
+	{0xd4,0x40},
+	{0xd5,0x00},
+*/
+	{0xd6,0x30},
+	{0xd7,0x00},
+	{0xd8,0x0a},
+	{0xd9,0x16},
+	{0xda,0x39},
+	{0xdb,0xf8},
+	/////////////////////////////////////////////////
+	////////////////////   LSC   ////////////////////
+	/////////////////////////////////////////////////
+	{0xfe,0x01}, 
+	{0xc1,0x3c}, 
+	{0xc2,0x50}, 
+	{0xc3,0x00}, 
+	{0xc4,0x40}, 
+	{0xc5,0x30}, 
+	{0xc6,0x30}, 
+	{0xc7,0x10}, 
+	{0xc8,0x00}, 
+	{0xc9,0x00}, 
+	{0xdc,0x20}, 
+	{0xdd,0x10}, 
+	{0xdf,0x00}, 
+	{0xde,0x00}, 
+	/////////////////////////////////////////////////
+	///////////////////  Histogram  /////////////////
+	/////////////////////////////////////////////////
 	{0x01, 0x10},
 	{0x0b, 0x31},
 	{0x0e, 0x50},
@@ -349,10 +388,17 @@ static struct msm_camera_i2c_reg_array gc0310_recommend_setting_list[] = {
 	{0x15, 0x60},
 	{0x16, 0x60},
 	{0x17, 0xe0},
-	{0xcc, 0x10},
-	{0xcd, 0x10},
-	{0xce, 0xa0},
-	{0xcf, 0xe0},
+	/////////////////////////////////////////////////
+	//////////////   Measure Window   ///////////////
+	/////////////////////////////////////////////////
+	{0xcc,0x0c}, 
+	{0xcd,0x10}, 
+	{0xce,0xa0}, 
+	{0xcf,0xe6}, 
+                                 
+	/////////////////////////////////////////////////
+	/////////////////   dark sun   //////////////////
+	/////////////////////////////////////////////////
 	{0x45, 0xf7},
 	{0x46, 0xff},
 	{0x47, 0x15},
@@ -378,6 +424,28 @@ static struct msm_camera_i2c_reg_array gc0310_recommend_setting_list[] = {
 	{0x29, 0x02},
 	{0x2a, 0x04},
 	{0xfe, 0x00},
+	
+	/////////////////////////////////////////////////
+	///////////////////  banding  ///////////////////
+	/////////////////////////////////////////////////
+	{0xfe,0x00},
+	{0x05,0x02},
+	{0x06,0xd1}, //HB
+	{0x07,0x00},
+	{0x08,0x22}, //VB
+	{0xfe,0x01},
+	{0x25,0x00}, //step 
+	{0x26,0x6a}, 
+	{0x27,0x02}, //20fps
+	{0x28,0x12},  
+	{0x29,0x03}, //12.5fps
+	{0x2a,0x50}, 
+	{0x2b,0x06}, //7.14fps
+	{0x2c,0xa0}, 
+	{0x2d,0x06}, //5.55fps
+	{0x2e,0xa0},
+	{0x3c,0x30},//20
+	{0xfe,0x00},
 };
 
 static struct msm_camera_i2c_reg_setting gc0310_recommend_setting[] = {
@@ -398,6 +466,16 @@ static struct v4l2_subdev_info gc0310_subdev_info[] = {
 		.order    = 0,
 	},
 };
+
+static struct msm_camera_i2c_reg_conf gc0310_vga_settings[] = {
+	{0xfe,0x00}, //crop enable
+	{0x50,0x01}, //crop enable
+	{0x55,0x01}, //crop window height
+	{0x56,0xe0},
+	{0x57,0x02}, //crop window width
+	{0x58,0x80},
+};
+
 
 static struct msm_camera_i2c_reg_array gc0310_start_settings_list[] = {
 	{0xfe, 0x03,},
@@ -420,6 +498,336 @@ static struct msm_camera_i2c_reg_array gc0310_stop_settings_list[] = {
 	{0x10, 0x84,},
 	{0xfe, 0x00,},
 };
+
+/////add tiger/////
+static struct msm_camera_i2c_reg_conf gc0310_reg_saturation[11][3] = {
+	{
+		{0xfe,0x00},{0xd1,0x10},{0xd2,0x10},
+	},
+	{
+		{0xfe,0x00},{0xd1,0x18},{0xd2,0x18},
+	},
+	{
+		{0xfe,0x00},{0xd1,0x20},{0xd2,0x20},
+	},
+	{
+		{0xfe,0x00},{0xd1,0x28},{0xd2,0x28},
+	},
+	{
+		{0xfe,0x00},{0xd1,0x2c},{0xd2,0x2c},
+	},
+	{
+		{0xfe,0x00},{0xd1,0x34},{0xd2,0x34},  
+	},
+	{
+		{0xfe,0x00},{0xd1,0x38},{0xd2,0x38},
+	},
+	{
+		{0xfe,0x00},{0xd1,0x40},{0xd2,0x40},
+	},
+	{
+		{0xfe,0x00},{0xd1,0x48},{0xd2,0x48},
+	},
+	{
+		{0xfe,0x00},{0xd1,0x50},{0xd2,0x50},
+	},
+	{
+		{0xfe,0x00},{0xd1,0x58},{0xd2,0x58},
+	},
+};
+
+static struct msm_camera_i2c_reg_conf gc0310_reg_contrast[11][3] = {
+	{
+		{0xfe, 0x00},{0xd3, 0x18},{0xfe, 0x00},
+	},
+	{
+		{0xfe, 0x00},{0xd3, 0x20},{0xfe, 0x00},
+	},
+	{
+		{0xfe, 0x00},{0xd3, 0x28},{0xfe, 0x00},
+	},
+	{
+		{0xfe, 0x00},{0xd3, 0x30},{0xfe, 0x00},
+	},
+	{
+		{0xfe, 0x00},{0xd3, 0x34},{0xfe, 0x00},
+	},
+	{
+		{0xfe, 0x00},{0xd3, 0x40},{0xfe, 0x00},  
+	},
+	{
+		{0xfe, 0x00},{0xd3, 0x48},{0xfe, 0x00},
+	},
+	{
+		{0xfe, 0x00},{0xd3, 0x50},{0xfe, 0x00},
+	},
+	{
+		{0xfe, 0x00},{0xd3, 0x58},{0xfe, 0x00},
+	},
+	{
+		{0xfe, 0x00},{0xd3, 0x60},{0xfe, 0x00},
+	},
+	{
+		{0xfe, 0x00},{0xd3, 0x68},{0xfe, 0x00},
+	},
+};
+
+static struct msm_camera_i2c_reg_conf gc0310_reg_sharpness[7][3] = {
+	{{0xfe, 0x00},{0x95, 0x33},{0xfe, 0x00}},//Sharpness -3
+	{{0xfe, 0x00},{0x95, 0x33},{0xfe, 0x00}},//Sharpness -2
+	{{0xfe, 0x00},{0x95, 0x44},{0xfe, 0x00}},//Sharpness -1
+	{{0xfe, 0x00},{0x95, 0x65},{0xfe, 0x00}},//Sharpness  0
+	{{0xfe, 0x00},{0x95, 0x77},{0xfe, 0x00}},//Sharpness +1
+	{{0xfe, 0x00},{0x95, 0x88},{0xfe, 0x00}},//Sharpness +2
+	{{0xfe, 0x00},{0x95, 0x99},{0xfe, 0x00}},//Sharpness +3
+};
+static struct msm_camera_i2c_reg_conf gc0310_reg_iso[7][2] = {
+//not supported
+	/* auto */
+	{
+		{0xfe, 0x00},
+		//{0x70, 0x70},
+	},
+	/* auto hjt */  
+	{
+		{0xfe, 0x00},
+		//{0x70, 0x78},
+
+	},
+	/* iso 100 */
+	{
+		{0xfe, 0x00},
+		//{0x70, 0x80},
+
+	},
+	/* iso 200 */
+	{
+		{0xfe, 0x00},
+		//{0x70, 0x88},
+
+	},
+	/* iso 400 */
+	{
+		{0xfe, 0x00},
+		//{0x70, 0x90},
+
+	},
+	/* iso 800 */
+	{
+		{0xfe, 0x00},
+		//{0x70, 0x98},
+
+	},
+	/* iso 1600 */
+	{
+		{0xfe, 0x00},
+	    //{0x70, 0xa0},
+	},
+};
+static struct msm_camera_i2c_reg_conf gc0310_reg_exposure_compensation[5][3] = {
+	{{0xfe, 0x01},{0x13, 0x18},{0xfe, 0x00}},//Exposure -2
+	{{0xfe, 0x01},{0x13, 0x28},{0xfe, 0x00}},//Exposure -1
+	{{0xfe, 0x01},{0x13, 0x48},{0xfe, 0x00}},//Exposure
+	{{0xfe, 0x01},{0x13, 0x50},{0xfe, 0x00}},//Exposure +1
+	{{0xfe, 0x01},{0x13, 0x58},{0xfe, 0x00}},//Exposure +2
+};
+static struct msm_camera_i2c_reg_conf gc0310_reg_antibanding[4][20] = {
+	/* OFF */  //60-1  50-2   auto-off NC
+	{
+		{0xfe,0x00},
+		{0x05,0x02},
+		{0x06,0xd1}, //HB
+		{0x07,0x00},
+		{0x08,0x22}, //VB
+		{0xfe,0x01},
+		{0x25,0x00}, //step 
+		{0x26,0x6a}, 
+		{0x27,0x02}, //20fps
+		{0x28,0x12},  
+		{0x29,0x03}, //12.5fps
+		{0x2a,0x50}, 
+		{0x2b,0x06}, //7.14fps
+		{0x2c,0xa0}, 
+		{0x2d,0x07}, //5.55fps
+		{0x2e,0x74},
+		{0x3c,0x20},
+		{0xfe,0x00},
+
+	}, /*ANTIBANDING 60HZ*/
+	
+	/* 60Hz */
+	{
+		{0xfe,0x00},	
+		{0x05,0x02},
+		{0x06,0x60}, //HB
+		{0x07,0x00},
+		{0x08,0x58}, //VB
+		
+		{0xfe,0x01},
+		{0x25,0x00}, //step 
+		{0x26,0x60}, 
+		
+		{0x27,0x02}, //20fps
+		{0x28,0x40},  
+		{0x29,0x03}, //12.5fps
+		{0x2a,0x60}, 
+		{0x2b,0x06}, //7.14fps
+		{0x2c,0x00}, 
+		{0x2d,0x08}, //5.55fps
+		{0x2e,0x40},
+		{0xfe,0x00},
+		   
+	}, /*ANTIBANDING 50HZ*/
+
+	/* 50Hz */
+	{
+		{0xfe,0x00},
+		{0x05,0x02},
+		{0x06,0xd1}, //HB
+		{0x07,0x00},
+		{0x08,0x22}, //VB
+		{0xfe,0x01},
+		{0x25,0x00}, //step 
+		{0x26,0x6a}, 
+		{0x27,0x02}, //20fps
+		{0x28,0x12},  
+		{0x29,0x03}, //12.5fps
+		{0x2a,0x50}, 
+		{0x2b,0x06}, //7.14fps
+		{0x2c,0xa0}, 
+		{0x2d,0x07}, //5.55fps
+		{0x2e,0x74},
+		{0x3c,0x20},
+		{0xfe,0x00},
+
+	}, /*ANTIBANDING 60HZ*/
+	
+	/* AUTO */
+	{
+		{0xfe,0x00},
+		{0x05,0x02},
+		{0x06,0xd1}, //HB
+		{0x07,0x00},
+		{0x08,0x22}, //VB
+		{0xfe,0x01},
+		{0x25,0x00}, //step 
+		{0x26,0x6a}, 
+		{0x27,0x02}, //20fps
+		{0x28,0x12},  
+		{0x29,0x03}, //12.5fps
+		{0x2a,0x50}, 
+		{0x2b,0x06}, //7.14fps
+		{0x2c,0xa0}, 
+		{0x2d,0x07}, //5.55fps
+		{0x2e,0x74},
+		{0x3c,0x20},
+		{0xfe,0x00},
+	},/*ANTIBANDING 50HZ*/
+};
+
+//begin effect
+static struct msm_camera_i2c_reg_conf gc0310_reg_effect_normal[] = {
+	/* normal: */
+	{0x43, 0x00},//0xe0
+};
+
+static struct msm_camera_i2c_reg_conf gc0310_reg_effect_black_white[] = {
+	/* B&W: */
+	{0x43, 0x02},
+	{0xda, 0x00},
+	{0xdb, 0x00},
+};
+
+static struct msm_camera_i2c_reg_conf gc0310_reg_effect_negative[] = {
+	/* Negative: */
+	{0x43, 0x01},
+};
+
+static struct msm_camera_i2c_reg_conf gc0310_reg_effect_old_movie[] = {
+	/* Sepia(antique): */
+	{0x43, 0x02},
+	{0xda, 0xd0},
+	{0xdb, 0x28},
+};
+
+static struct msm_camera_i2c_reg_conf gc0310_reg_effect_solarize[] = {
+	{0x43, 0x02},
+	{0xda, 0xc0},
+	{0xdb, 0xc0},
+};
+// end effect
+
+
+//begin scene, not realised
+static struct msm_camera_i2c_reg_conf gc0310_reg_scene_auto[] = {
+	/* <SCENE_auto> */
+	{0x43, 0x00},//0xe0
+
+};
+
+static struct msm_camera_i2c_reg_conf gc0310_reg_scene_portrait[] = {
+	/* <CAMTUNING_SCENE_PORTRAIT> */
+	{0x43, 0x00},//0xe0
+
+};
+
+static struct msm_camera_i2c_reg_conf gc0310_reg_scene_landscape[] = {
+	/* <CAMTUNING_SCENE_LANDSCAPE> */
+	{0x43, 0x00},//0xe0
+
+};
+
+static struct msm_camera_i2c_reg_conf gc0310_reg_scene_night[] = {
+	/* <SCENE_NIGHT> */
+	{0x43, 0x00},//0xe0
+
+};
+//end scene
+
+
+//begin white balance
+static struct msm_camera_i2c_reg_conf gc0310_reg_wb_auto[] = {
+	/* Auto: */
+{0x42, 0xcf},
+{0xfe, 0x00},
+{0xfe, 0x00},
+{0xfe, 0x00},
+};
+
+static struct msm_camera_i2c_reg_conf gc0310_reg_wb_sunny[] = {
+	/* Sunny: */
+{0x42, 0xcd},
+{0x77, 0x74},
+{0x78, 0x52},
+{0x79, 0x40},
+};
+
+static struct msm_camera_i2c_reg_conf gc0310_reg_wb_cloudy[] = {
+	/* Cloudy: */
+{0x42, 0xcd},
+{0x77, 0x8c},
+{0x78, 0x50},
+{0x79, 0x40},
+};
+
+static struct msm_camera_i2c_reg_conf gc0310_reg_wb_office[] = {
+	/* Office: */
+{0x42, 0xcd},
+{0x77, 0x48},
+{0x78, 0x40},
+{0x79, 0x5c},
+};
+
+static struct msm_camera_i2c_reg_conf gc0310_reg_wb_home[] = {
+	/* Home: */
+{0x42, 0xcd},
+{0x77, 0x40},
+{0x78, 0x54},
+{0x79, 0x70},
+};
+//end white balance
+
+/////end/////////
 
 static struct msm_camera_i2c_reg_setting gc0310_stop_settings[] = {
   {
@@ -461,6 +869,32 @@ static const struct of_device_id gc0310_dt_match[] = {
 
 MODULE_DEVICE_TABLE(of, gc0310_dt_match);
 
+////add tiger/////
+static void gc0310_i2c_write_table(struct msm_sensor_ctrl_t *s_ctrl,
+		struct msm_camera_i2c_reg_conf *table,
+		int num)
+{
+	int i = 0;
+	int rc = 0;
+	for (i = 0; i < num; ++i) {
+		rc = s_ctrl->sensor_i2c_client->i2c_func_tbl->
+			i2c_write(
+			s_ctrl->sensor_i2c_client, table->reg_addr,
+			table->reg_data,
+			MSM_CAMERA_I2C_BYTE_DATA);
+		if (rc < 0) {
+			msleep(100);
+			rc = s_ctrl->sensor_i2c_client->i2c_func_tbl->
+			i2c_write(
+				s_ctrl->sensor_i2c_client, table->reg_addr,
+				table->reg_data,
+				MSM_CAMERA_I2C_BYTE_DATA);
+		}
+		table++;
+	}
+}
+
+////end/////////
 static int32_t gc0310_platform_probe(struct platform_device *pdev)
 {
 	int32_t rc;
@@ -502,6 +936,156 @@ static void __exit gc0310_exit_module(void)
 		i2c_del_driver(&gc0310_i2c_driver);
 	return;
 }
+////add tiger/////
+static void gc0310_set_stauration(struct msm_sensor_ctrl_t *s_ctrl, int value)
+{
+
+	gc0310_i2c_write_table(s_ctrl, &gc0310_reg_saturation[value][0],
+		ARRAY_SIZE(gc0310_reg_saturation[value]));
+
+
+		
+}
+static void gc0310_set_contrast(struct msm_sensor_ctrl_t *s_ctrl, int value)
+{
+	CDBG("%s %d\n", __func__, value);
+	gc0310_i2c_write_table(s_ctrl, &gc0310_reg_contrast[value][0],
+		ARRAY_SIZE(gc0310_reg_contrast[value]));
+}
+
+static void gc0310_set_sharpness(struct msm_sensor_ctrl_t *s_ctrl, int value)
+{
+	int val = value / 6;
+	CDBG("%s %d\n", __func__, value);
+	gc0310_i2c_write_table(s_ctrl, &gc0310_reg_sharpness[val][0],
+		ARRAY_SIZE(gc0310_reg_sharpness[val]));
+}
+static void gc0310_set_iso(struct msm_sensor_ctrl_t *s_ctrl, int value)
+{
+	CDBG("%s %d\n", __func__, value);
+	gc0310_i2c_write_table(s_ctrl, &gc0310_reg_iso[value][0],
+		ARRAY_SIZE(gc0310_reg_iso[value]));
+}
+static void gc0310_set_exposure_compensation(struct msm_sensor_ctrl_t *s_ctrl,
+	int value)
+{
+
+	int val = (value + 12) / 6;
+	CDBG("%s %d\n", __func__, value);
+	gc0310_i2c_write_table(s_ctrl, &gc0310_reg_exposure_compensation[val][0],
+		ARRAY_SIZE(gc0310_reg_exposure_compensation[val]));	   
+		
+}
+static void gc0310_set_effect(struct msm_sensor_ctrl_t *s_ctrl, int value)
+{
+	CDBG("%s %d\n", __func__, value);
+	switch (value) {
+	case MSM_CAMERA_EFFECT_MODE_OFF: {
+		gc0310_i2c_write_table(s_ctrl, &gc0310_reg_effect_normal[0],
+			ARRAY_SIZE(gc0310_reg_effect_normal));
+		break;
+	}
+	case MSM_CAMERA_EFFECT_MODE_MONO: {
+		gc0310_i2c_write_table(s_ctrl, &gc0310_reg_effect_black_white[0],
+			ARRAY_SIZE(gc0310_reg_effect_black_white));
+		break;
+	}
+	case MSM_CAMERA_EFFECT_MODE_NEGATIVE: {
+		gc0310_i2c_write_table(s_ctrl, &gc0310_reg_effect_negative[0],
+			ARRAY_SIZE(gc0310_reg_effect_negative));
+		break;
+	}
+	case MSM_CAMERA_EFFECT_MODE_SEPIA: {
+		gc0310_i2c_write_table(s_ctrl, &gc0310_reg_effect_old_movie[0],
+			ARRAY_SIZE(gc0310_reg_effect_old_movie));
+		break;
+	}
+	case MSM_CAMERA_EFFECT_MODE_SOLARIZE: {
+		gc0310_i2c_write_table(s_ctrl, &gc0310_reg_effect_solarize[0],
+			ARRAY_SIZE(gc0310_reg_effect_solarize));
+		break;
+	}
+	default:
+		gc0310_i2c_write_table(s_ctrl, &gc0310_reg_effect_normal[0],
+			ARRAY_SIZE(gc0310_reg_effect_normal));
+	}
+}
+
+static void gc0310_set_antibanding(struct msm_sensor_ctrl_t *s_ctrl, int value)
+{
+	CDBG("%s %d\n", __func__, value);
+	   CDBG("gc0310_PETER gc0310_set_antibanding = %x" , value);
+	gc0310_i2c_write_table(s_ctrl, &gc0310_reg_antibanding[value][0],
+		ARRAY_SIZE(gc0310_reg_antibanding[value]));
+}
+
+static void gc0310_set_scene_mode(struct msm_sensor_ctrl_t *s_ctrl, int value)
+{
+	CDBG("%s %d\n", __func__, value);
+	switch (value) {
+	case MSM_CAMERA_SCENE_MODE_OFF: {
+		gc0310_i2c_write_table(s_ctrl, &gc0310_reg_scene_auto[0],
+			ARRAY_SIZE(gc0310_reg_scene_auto));
+					break;
+	}
+	case MSM_CAMERA_SCENE_MODE_NIGHT: {
+		gc0310_i2c_write_table(s_ctrl, &gc0310_reg_scene_night[0],
+			ARRAY_SIZE(gc0310_reg_scene_night));
+					break;
+	}
+	case MSM_CAMERA_SCENE_MODE_LANDSCAPE: {
+		gc0310_i2c_write_table(s_ctrl, &gc0310_reg_scene_landscape[0],
+			ARRAY_SIZE(gc0310_reg_scene_landscape));
+					break;
+	}
+	case MSM_CAMERA_SCENE_MODE_PORTRAIT: {
+		gc0310_i2c_write_table(s_ctrl, &gc0310_reg_scene_portrait[0],
+			ARRAY_SIZE(gc0310_reg_scene_portrait));
+					break;
+	}
+	default:
+		gc0310_i2c_write_table(s_ctrl, &gc0310_reg_scene_auto[0],
+			ARRAY_SIZE(gc0310_reg_scene_auto));
+	}
+}
+
+static void gc0310_set_white_balance_mode(struct msm_sensor_ctrl_t *s_ctrl,
+	int value)
+{
+	CDBG("%s %d\n", __func__, value);
+	switch (value) {
+	case MSM_CAMERA_WB_MODE_AUTO: {
+		gc0310_i2c_write_table(s_ctrl, &gc0310_reg_wb_auto[0],
+			ARRAY_SIZE(gc0310_reg_wb_auto));
+		break;
+	}
+	case MSM_CAMERA_WB_MODE_INCANDESCENT: {
+		gc0310_i2c_write_table(s_ctrl, &gc0310_reg_wb_home[0],
+			ARRAY_SIZE(gc0310_reg_wb_home));
+		break;
+	}
+	case MSM_CAMERA_WB_MODE_DAYLIGHT: {
+		gc0310_i2c_write_table(s_ctrl, &gc0310_reg_wb_sunny[0],
+			ARRAY_SIZE(gc0310_reg_wb_sunny));
+					break;
+	}
+	case MSM_CAMERA_WB_MODE_FLUORESCENT: {
+		gc0310_i2c_write_table(s_ctrl, &gc0310_reg_wb_office[0],
+			ARRAY_SIZE(gc0310_reg_wb_office));
+					break;
+	}
+	case MSM_CAMERA_WB_MODE_CLOUDY_DAYLIGHT: {
+		gc0310_i2c_write_table(s_ctrl, &gc0310_reg_wb_cloudy[0],
+			ARRAY_SIZE(gc0310_reg_wb_cloudy));
+					break;
+	}
+	default:
+		gc0310_i2c_write_table(s_ctrl, &gc0310_reg_wb_auto[0],
+		ARRAY_SIZE(gc0310_reg_wb_auto));
+	}
+}
+
+////end  ///////
 
 int32_t gc0310_sensor_config(struct msm_sensor_ctrl_t *s_ctrl,
 	void __user *argp)
@@ -546,30 +1130,22 @@ int32_t gc0310_sensor_config(struct msm_sensor_ctrl_t *s_ctrl,
 			s_ctrl->sensor_i2c_client, gc0310_recommend_setting);
 		break;
 
-	case CFG_SET_RESOLUTION: {
-	/*copy from user the desired resoltuion*/
-		enum msm_sensor_resolution_t res = MSM_SENSOR_INVALID_RES;
-		if (copy_from_user(&res, (void *)cdata->cfg.setting,
-			sizeof(enum msm_sensor_resolution_t))) {
+	case CFG_SET_RESOLUTION: 
+	{
+		int val = 0;
+		if (copy_from_user(&val,
+			(void *)cdata->cfg.setting, sizeof(int))) {
 			pr_err("%s:%d failed\n", __func__, __LINE__);
 			rc = -EFAULT;
 			break;
 		}
 
-		pr_err("%s:%d  res =%d\n", __func__, __LINE__, res);
+	    	   CDBG("gc0310_PETER-preview/capture-VAL = %d" , val);
+			gc0310_i2c_write_table(s_ctrl, &gc0310_vga_settings[0],
+			ARRAY_SIZE(gc0310_vga_settings));
+					msleep(100);//add
 
-		if (res == MSM_SENSOR_RES_FULL) {
-			rc = s_ctrl->sensor_i2c_client->i2c_func_tbl->
-				i2c_write_table(
-				s_ctrl->sensor_i2c_client, gc0310_recommend_setting);
-				pr_err("%s:%d res =%d\n gc0310_recommend_setting ",
-				__func__, __LINE__, res);
-		} else {
-			pr_err("%s:%d failed resoultion set\n", __func__,
-				__LINE__);
-			rc = -EFAULT;
 		}
-	}
 		break;
 	case CFG_SET_STOP_STREAM:
 		rc = s_ctrl->sensor_i2c_client->i2c_func_tbl->
@@ -800,12 +1376,46 @@ int32_t gc0310_sensor_config(struct msm_sensor_ctrl_t *s_ctrl,
 		s_ctrl->camera_stream_type = stream_type;
 		break;
 	}
-	case CFG_SET_SATURATION:
+	case CFG_SET_SATURATION:{
+			int32_t sat_lev;
+			if (copy_from_user(&sat_lev, (void *)cdata->cfg.setting,
+				sizeof(int32_t))) {
+				pr_err("%s:%d failed\n", __func__, __LINE__);
+				rc = -EFAULT;
+				break;
+			}
+		pr_debug("%s: Saturation Value is %d", __func__, sat_lev);
+		gc0310_set_stauration(s_ctrl, sat_lev);
+
 		break;
-	case CFG_SET_CONTRAST:
+		}
+	case CFG_SET_CONTRAST:{
+			int32_t con_lev;
+			if (copy_from_user(&con_lev, (void *)cdata->cfg.setting,
+				sizeof(int32_t))) {
+				pr_err("%s:%d failed\n", __func__, __LINE__);
+				rc = -EFAULT;
+				break;
+			}
+		pr_debug("%s: Contrast Value is %d", __func__, con_lev);
+
+		gc0310_set_contrast(s_ctrl, con_lev);
+
 		break;
-	case CFG_SET_SHARPNESS:
+		}
+	case CFG_SET_SHARPNESS:{
+			int32_t shp_lev;
+			if (copy_from_user(&shp_lev, (void *)cdata->cfg.setting,
+				sizeof(int32_t))) {
+				pr_err("%s:%d failed\n", __func__, __LINE__);
+				rc = -EFAULT;
+				break;
+			}
+		pr_debug("%s: Sharpness Value is %d", __func__, shp_lev);
+		gc0310_set_sharpness(s_ctrl, shp_lev);
+
 		break;
+	}
 	case CFG_SET_AUTOFOCUS:
 		/* TO-DO: set the Auto Focus */
 		pr_debug("%s: Setting Auto Focus", __func__);
@@ -814,18 +1424,85 @@ int32_t gc0310_sensor_config(struct msm_sensor_ctrl_t *s_ctrl,
 		/* TO-DO: Cancel the Auto Focus */
 		pr_debug("%s: Cancelling Auto Focus", __func__);
 		break;
-	case CFG_SET_ISO:
+	case CFG_SET_ISO:{
+		int32_t iso_lev;
+		if (copy_from_user(&iso_lev, (void *)cdata->cfg.setting,
+			sizeof(int32_t))) {
+			pr_err("%s:%d failed\n", __func__, __LINE__);
+			rc = -EFAULT;
+			break;
+		}
+		CDBG("%s: ISO Value is %d\n", __func__, iso_lev);
+
+		gc0310_set_iso(s_ctrl, iso_lev);
 		break;
-	case CFG_SET_EXPOSURE_COMPENSATION:
+		}
+	case CFG_SET_EXPOSURE_COMPENSATION:{
+
+		int32_t ec_lev;
+		if (copy_from_user(&ec_lev, (void *)cdata->cfg.setting,
+			sizeof(int32_t))) {
+			pr_err("%s:%d failed\n", __func__, __LINE__);
+			rc = -EFAULT;
+			break;
+		}
+		pr_debug("%s: Exposure compensation Value is %d",
+			__func__, ec_lev);
+		gc0310_set_exposure_compensation(s_ctrl, ec_lev);
+
 		break;
-	case CFG_SET_EFFECT:
+	}
+	case CFG_SET_EFFECT:{
+		int32_t effect_mode;
+		if (copy_from_user(&effect_mode, (void *)cdata->cfg.setting,
+			sizeof(int32_t))) {
+			pr_err("%s:%d failed\n", __func__, __LINE__);
+			rc = -EFAULT;
+			break;
+		}
+		CDBG("%s: Effect mode is %d\n", __func__, effect_mode);
+		gc0310_set_effect(s_ctrl, effect_mode);
 		break;
-	case CFG_SET_ANTIBANDING:
+	}
+	case CFG_SET_ANTIBANDING:{
+		int32_t antibanding_mode;
+		if (copy_from_user(&antibanding_mode,
+			(void *)cdata->cfg.setting,
+			sizeof(int32_t))) {
+			pr_err("%s:%d failed\n", __func__, __LINE__);
+			rc = -EFAULT;
+			break;
+		}
+		CDBG("%s: anti-banding mode is %d\n", __func__,
+			antibanding_mode);
+		gc0310_set_antibanding(s_ctrl, antibanding_mode);
 		break;
-	case CFG_SET_BESTSHOT_MODE:
+		}
+	case CFG_SET_BESTSHOT_MODE:{
+
+		int32_t bs_mode;
+		if (copy_from_user(&bs_mode, (void *)cdata->cfg.setting,
+			sizeof(int32_t))) {
+			pr_err("%s:%d failed\n", __func__, __LINE__);
+			rc = -EFAULT;
+			break;
+		}
+		CDBG("%s: best shot mode is %d\n", __func__, bs_mode);
+		gc0310_set_scene_mode(s_ctrl, bs_mode);
 		break;
-	case CFG_SET_WHITE_BALANCE:
+	}
+	case CFG_SET_WHITE_BALANCE:{
+		int32_t wb_mode;
+		if (copy_from_user(&wb_mode, (void *)cdata->cfg.setting,
+			sizeof(int32_t))) {
+			pr_err("%s:%d failed\n", __func__, __LINE__);
+			rc = -EFAULT;
+			break;
+		}
+		CDBG("%s: white balance is %d\n", __func__, wb_mode);
+		gc0310_set_white_balance_mode(s_ctrl, wb_mode);
 		break;
+	}
 	default:
 		rc = -EFAULT;
 		break;

@@ -167,6 +167,8 @@ static inline char *host_bustostr(int bus)
 		return "PCI";
 	case HCI_SDIO:
 		return "SDIO";
+	case HCI_SMD:
+		return "SMD";
 	default:
 		return "UNKNOWN";
 	}

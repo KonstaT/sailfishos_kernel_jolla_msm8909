@@ -1,3 +1,4 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /*
  *  linux/drivers/mmc/core/mmc.c
  *
@@ -328,7 +329,11 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 	}
 
 	card->ext_csd.rev = ext_csd[EXT_CSD_REV];
+  #ifdef UNISCOPE_DRIVER_QC8909  //liguowei@uniscope.com 20151102 add for toshiba 8+1 new flash 
+	if (card->ext_csd.rev > 8) {
+  #else
 	if (card->ext_csd.rev > 7) {
+  #endif
 		pr_err("%s: unrecognised EXT_CSD revision %d\n",
 			mmc_hostname(card->host), card->ext_csd.rev);
 		err = -EINVAL;

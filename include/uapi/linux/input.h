@@ -1,3 +1,4 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /*
  * Copyright (c) 1999-2002 Vojtech Pavlik
  *
@@ -475,6 +476,7 @@ struct input_keymap_entry {
 #define KEY_RFKILL		247	/* Key that controls all radios */
 
 #define KEY_MICMUTE		248	/* Mute / unmute the microphone */
+#define KEY_APP_SWITCH		249	/*zhangbing@uniscope_drv 20151104 add for screen pinning*/
 
 /* Code 255 is reserved for special needs of AT keyboard driver */
 

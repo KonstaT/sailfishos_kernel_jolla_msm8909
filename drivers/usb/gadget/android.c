@@ -3609,7 +3609,7 @@ static struct usb_composite_driver android_usb_driver = {
 	.bind		= android_bind,
 	.unbind		= android_usb_unbind,
 	.disconnect	= android_disconnect,
-	.max_speed	= USB_SPEED_SUPER
+	.max_speed	= USB_SPEED_HIGH
 };
 
 static void android_suspend(struct usb_gadget *gadget)

@@ -1,3 +1,4 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /* drivers/input/touchscreen/goodix_tool.c
  *
  * 2010 - 2012 Goodix Technology.
@@ -25,6 +26,7 @@
 #include <linux/mutex.h>
 #include <linux/proc_fs.h>
 #include <linux/debugfs.h>
+#include <linux/uaccess.h>
 
 #define DATA_LENGTH_UINT    512
 #define CMD_HEAD_LENGTH     (sizeof(struct st_cmd_head) - sizeof(u8 *))
@@ -60,7 +62,7 @@ static s32 (*tool_i2c_write)(u8 *, u16);
 
 s32 data_length;
 s8 ic_type[16] = {0};
-
+/*
 static void tool_set_proc_name(char *procname)
 {
 	char *months[12] = {"Jan", "Feb", "Mar", "Apr", "May",
@@ -70,7 +72,6 @@ static void tool_set_proc_name(char *procname)
 	int i = 0, n_month = 1, n_day = 0, n_year = 0;
 	snprintf(date, 20, "%s", __DATE__);
 
-	/* pr_debug("compile date: %s", date); */
 
 	sscanf(date, "%s %d %d", month, &n_day, &n_year);
 
@@ -82,9 +83,9 @@ static void tool_set_proc_name(char *procname)
 	}
 
 	snprintf(procname, 20, "gmnode%04d%02d%02d", n_year, n_month, n_day);
-	/* pr_debug("procname = %s", procname); */
+	 pr_err("procname = %s", procname);
 }
-
+*/
 static s32 tool_i2c_read_no_extra(u8 *buf, u16 len)
 {
 	s32 ret = -1;
@@ -320,7 +321,7 @@ static s32 goodix_tool_write(struct file *filp, const char __user *userbuf,
 		goto exit;
 	}
 
-	dev_dbg(&gt_client->dev, "wr:0x%02x, flag:0x%02x, flag addr:0x%02x%02x, flag val:0x%02x, flag rel:0x%02x, circle:%d, times:%d, retry:%d, delay:%d, data len:%d, addr len:%d, addr:0x%02x%02x, write len: %d.",
+	pr_err("goodix write wr=0x%02x,  flag=0x%02x,  flag addr=0x%02x%02x,  flag val=0x%02x, flag rel=0x%02x, circle=%d, times:=%d, retry=%d, delay=%d, data len=%d, addr len=%d, addr=0x%02x%02x, write len=%d\n",
 		cmd_head.wr, cmd_head.flag, cmd_head.flag_addr[0],
 		cmd_head.flag_addr[1], cmd_head.flag_val,
 		cmd_head.flag_relation,	(s32)cmd_head.circle,
@@ -341,7 +342,7 @@ static s32 goodix_tool_write(struct file *filp, const char __user *userbuf,
 		goto exit;
 	}
 
-	if (cmd_head.wr == GTP_RW_WRITE) {
+	if (cmd_head.wr == 1) {
 		ret = copy_from_user(&cmd_head.data[GTP_ADDR_LENGTH],
 				&userbuf[CMD_HEAD_LENGTH], cmd_head.data_len);
 		if (ret) {
@@ -352,13 +353,13 @@ static s32 goodix_tool_write(struct file *filp, const char __user *userbuf,
 		memcpy(&cmd_head.data[GTP_ADDR_LENGTH - cmd_head.addr_len],
 					cmd_head.addr, cmd_head.addr_len);
 
-		if (cmd_head.flag == GTP_NEED_FLAG) {
+		if (cmd_head.flag == 1) {
 			if (comfirm() ==  FAIL) {
 				dev_err(&gt_client->dev, "Comfirm fail!");
 				ret = -EINVAL;
 				goto exit;
 			}
-		} else if (cmd_head.flag == GTP_NEED_INTERRUPT) {
+		} else if (cmd_head.flag == 2) {
 			/* Need interrupt! */
 		}
 		if (tool_i2c_write(
@@ -374,7 +375,7 @@ static s32 goodix_tool_write(struct file *filp, const char __user *userbuf,
 
 		ret = cmd_head.data_len + CMD_HEAD_LENGTH;
 		goto exit;
-	} else if (cmd_head.wr == GTP_RW_WRITE_IC_TYPE) {  /* Write ic type */
+	} else if (cmd_head.wr == 3) {  /* Write ic type */
 		ret = copy_from_user(&cmd_head.data[0],
 				&userbuf[CMD_HEAD_LENGTH],
 				cmd_head.data_len);
@@ -396,10 +397,10 @@ static s32 goodix_tool_write(struct file *filp, const char __user *userbuf,
 
 		ret = cmd_head.data_len + CMD_HEAD_LENGTH;
 		goto exit;
-	} else if (cmd_head.wr == GTP_RW_NO_WRITE) {
+	} else if (cmd_head.wr == 5) {
 		ret = cmd_head.data_len + CMD_HEAD_LENGTH;
 		goto exit;
-	} else if (cmd_head.wr == GTP_RW_DISABLE_IRQ) { /* disable irq! */
+	} else if (cmd_head.wr == 7) { /* disable irq! */
 		gtp_irq_disable(i2c_get_clientdata(gt_client));
 
 		#if GTP_ESD_PROTECT
@@ -407,7 +408,7 @@ static s32 goodix_tool_write(struct file *filp, const char __user *userbuf,
 		#endif
 		ret = CMD_HEAD_LENGTH;
 		goto exit;
-	} else if (cmd_head.wr == GTP_RW_ENABLE_IRQ) { /* enable irq! */
+	} else if (cmd_head.wr == 9) { /* enable irq! */
 		gtp_irq_enable(i2c_get_clientdata(gt_client));
 
 		#if GTP_ESD_PROTECT
@@ -415,7 +416,7 @@ static s32 goodix_tool_write(struct file *filp, const char __user *userbuf,
 		#endif
 		ret = CMD_HEAD_LENGTH;
 		goto exit;
-	} else if (cmd_head.wr == GTP_RW_CHECK_RAWDIFF_MODE) {
+	} else if (cmd_head.wr == 17) {
 		struct goodix_ts_data *ts = i2c_get_clientdata(gt_client);
 		ret = copy_from_user(&cmd_head.data[GTP_ADDR_LENGTH],
 				&userbuf[CMD_HEAD_LENGTH], cmd_head.data_len);
@@ -432,16 +433,16 @@ static s32 goodix_tool_write(struct file *filp, const char __user *userbuf,
 		}
 		ret = CMD_HEAD_LENGTH;
 		goto exit;
-	} else if (cmd_head.wr == GTP_RW_ENTER_UPDATE_MODE) {
+	} else if (cmd_head.wr == 11) {
 		/* Enter update mode! */
 		if (gup_enter_update_mode(gt_client) ==  FAIL) {
 			ret = -EBUSY;
 			goto exit;
 		}
-	} else if (cmd_head.wr == GTP_RW_LEAVE_UPDATE_MODE) {
+	} else if (cmd_head.wr == 13) {
 		/* Leave update mode! */
 		gup_leave_update_mode(gt_client);
-	} else if (cmd_head.wr == GTP_RW_UPDATE_FW) {
+	} else if (cmd_head.wr == 15) {
 		/* Update firmware! */
 		show_len = 0;
 		total_len = 0;
@@ -490,14 +491,14 @@ static s32 goodix_tool_read(struct file *file, char __user *user_buf,
 	}
 
 	switch (cmd_head.wr) {
-	case GTP_RW_READ:
-		if (cmd_head.flag == GTP_NEED_FLAG) {
+	 case 0:
+		if (cmd_head.flag == 1) {
 			if (comfirm() == FAIL) {
 				dev_err(&gt_client->dev, "Comfirm fail!");
 				ret = -EINVAL;
 				goto exit;
 			}
-		} else if (cmd_head.flag == GTP_NEED_INTERRUPT) {
+		} else if (cmd_head.flag == 2) {
 			/* Need interrupt! */
 		}
 
@@ -529,10 +530,10 @@ static s32 goodix_tool_read(struct file *file, char __user *user_buf,
 		ret = simple_read_from_buffer(user_buf, count, ppos,
 			&cmd_head.data[GTP_ADDR_LENGTH], data_len);
 		break;
-	case GTP_RW_FILL_INFO:
+	case 4:
 		ret = fill_update_info(user_buf, count, ppos);
 		break;
-	case GTP_RW_READ_VERSION:
+	case 8:
 		/* Read driver version */
 		data_len = scnprintf(buf, sizeof(buf), "%s\n",
 			GTP_DRIVER_VERSION);
@@ -564,7 +565,7 @@ s32 init_wr_node(struct i2c_client *client)
 	memset(&cmd_head, 0, sizeof(cmd_head));
 	cmd_head.data = NULL;
 
-	i = GTP_I2C_RETRY_5;
+	i = 5;
 	while ((!cmd_head.data) && i) {
 		cmd_head.data = devm_kzalloc(&client->dev,
 				i * DATA_LENGTH_UINT, GFP_KERNEL);
@@ -581,16 +582,14 @@ s32 init_wr_node(struct i2c_client *client)
 	}
 
 	cmd_head.addr_len = 2;
-	cmd_head.retry = GTP_I2C_RETRY_5;
+	cmd_head.retry = 5;
 
 	register_i2c_func();
 
 	mutex_init(&lock);
-	tool_set_proc_name(procname);
-	goodix_proc_entry = proc_create(procname,
-			S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP,
-			goodix_proc_entry,
-			&goodix_proc_fops);
+	//tool_set_proc_name(procname);
+	strcpy(procname,"goodix_tool");
+	goodix_proc_entry = proc_create(procname,0777,goodix_proc_entry,&goodix_proc_fops);
 	if (goodix_proc_entry == NULL) {
 		dev_err(&client->dev, "Couldn't create proc entry!");
 		return FAIL;

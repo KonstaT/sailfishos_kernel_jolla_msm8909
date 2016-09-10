@@ -2101,10 +2101,12 @@ static void l2cap_ertm_resend(struct l2cap_chan *chan)
 					   tx_skb->data + L2CAP_HDR_SIZE);
 		}
 
+		/* Update FCS */
 		if (chan->fcs == L2CAP_FCS_CRC16) {
-			u16 fcs = crc16(0, (u8 *) tx_skb->data, tx_skb->len);
-			put_unaligned_le16(fcs, skb_put(tx_skb,
-							L2CAP_FCS_SIZE));
+			u16 fcs = crc16(0, (u8 *) tx_skb->data,
+					tx_skb->len - L2CAP_FCS_SIZE);
+			put_unaligned_le16(fcs, skb_tail_pointer(tx_skb) -
+						L2CAP_FCS_SIZE);
 		}
 
 		l2cap_do_send(chan, tx_skb);
@@ -2413,7 +2415,6 @@ static int l2cap_segment_sdu(struct l2cap_chan *chan,
 	} else {
 		sar = L2CAP_SAR_START;
 		sdu_len = len;
-		pdu_len -= L2CAP_SDULEN_SIZE;
 	}
 
 	while (len > 0) {
@@ -2428,10 +2429,8 @@ static int l2cap_segment_sdu(struct l2cap_chan *chan,
 		__skb_queue_tail(seg_queue, skb);
 
 		len -= pdu_len;
-		if (sdu_len) {
+		if (sdu_len)
 			sdu_len = 0;
-			pdu_len += L2CAP_SDULEN_SIZE;
-		}
 
 		if (len <= pdu_len) {
 			sar = L2CAP_SAR_END;

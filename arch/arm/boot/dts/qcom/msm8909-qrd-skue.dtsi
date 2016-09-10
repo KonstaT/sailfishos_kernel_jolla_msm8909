@@ -1,3 +1,4 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -56,7 +57,7 @@
 	};
 
 	hall_int_pin {
-		qcom,pins = <&gp 36>;
+		qcom,pins = <&gp 110>; /* JZZ(zhizhang)@uniscope_drv for keyled use gpio36 20150210 */
 		qcom,pin-func = <0>;
 		qcom,num-grp-pins = <1>;
 		label = "hall-irq";
@@ -65,44 +66,152 @@
 			bias-pull-up;
 		};
 	};
+	/* Added by JZZ(zhizhang)@uniscope_drv for sensor device tree 20150210 begin */
+	akm_reset_pin {
+		qcom,pins = <&gp 110>;
+		qcom,pin-func = <0>;
+		qcom,num-grp-pins = <1>;
+		label = "akm_reset_pin";
+		akm_default: akm_default {
+			drive-strength = <6>;
+			bias-pull-up;
+		};
+		akm_sleep: akm_sleep {
+			drive-strength = <2>;
+			bias-pull-down;
+		};
+	};
+	/* Added by JZZ(zhizhang)@uniscope_drv for sensor device tree 20150210 end */
+	/*kangyan@uni_drv add qmc7983 sleep protect begin*/
+	qmc_reset_pin {
+		qcom,pins = <&gp 110>;
+		qcom,pin-func = <0>;
+		qcom,num-grp-pins = <1>;
+		label = "qmc_reset_pin";
+		qmc_default: qmc_default {
+			drive-strength = <6>;
+			bias-pull-up;
+		};
+		qmc_sleep: qmc_sleep {
+			drive-strength = <2>;
+			bias-pull-down;
+		};
+	};
+	/*kangyan@uni_drv add qmc7983 sleep protect end*/
 };
 
 &soc {
+	/* <JZZ(zhizhang)>@uniscope_drv 20140701 for adding TP tp_power begin */
+	tp_power: regulator-tp {
+		compatible = "regulator-fixed";
+		regulator-name = "tp_power";
+		regulator-min-microvolt = <2800000>;
+		regulator-max-microvolt = <2800000>;
+		gpio = <&msm_gpio 93 0x01>;
+		startup-delay-us = <20000>;
+		enable-active-high;
+	};
+	/* <JZZ(zhizhang)>@uniscope_drv 20140701 for adding TP tp_power end */
 	i2c@78b9000 { /* BLSP1 QUP5 */
 		focaltech@38 {
-			compatible = "focaltech,5x06";
-			reg = <0x38>;
-			interrupt-parent = <&msm_gpio>;
-			interrupts = <13 0x2>;
-			vdd-supply = <&pm8909_l17>;
-			vcc_i2c-supply = <&pm8909_l6>;
-			/* pins used by touchscreen */
-			pinctrl-names = "pmx_ts_active","pmx_ts_suspend","pmx_ts_release";
+				compatible = "focaltech,5x06";
+				reg = <0x38>;
+				interrupt-parent = <&msm_gpio>; 
+				interrupts = <13 0x2008>;  
+				avdd-supply =<&tp_power>;
+				/*liguowei@uni	20150107  pinctrl  used by touchscreen begin */
+				pinctrl-names = "pmx_ts_active","pmx_ts_suspend","pmx_ts_release";
+				pinctrl-0 = <&ts_int_active &ts_reset_active>;
+				pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+				pinctrl-2 = <&ts_release>;
+				/*liguowei@uni	20150107  pinctrl  used by touchscreen end */
+				focaltech,name = "FT5406DQ9";
+				focaltech,family-id = <0x55>;
+				focaltech,reset-gpio = <&msm_gpio 12 0x0>;
+				focaltech,irq-gpio = <&msm_gpio 13 0x2008>;
+				focaltech,display-coords = <0 0 480 854>;
+				focaltech,panel-coords = <0 0 500 854>;
+				focaltech,button-map= <139 172 158>;
+				focaltech,no-force-update;
+				focaltech,i2c-pull-up;
+				focaltech,fw-vkey-support;
+				focaltech,group-id = <1>;
+				focaltech,hard-reset-delay-ms = <20>;
+				focaltech,soft-reset-delay-ms = <150>;
+				focaltech,num-max-touches = <5>;
+				focaltech,fw-name = "ft_8916_qrd_fw.bin";
+				focaltech,fw-delay-aa-ms = <50>;
+				focaltech,fw-delay-55-ms = <30>;
+				focaltech,fw-upgrade-id1 = <0x79>;
+				focaltech,fw-upgrade-id2 = <0x03>;
+				focaltech,fw-delay-readid-ms = <10>;
+				focaltech,fw-delay-era-flsh-ms = <2000>;
+				focaltech,fw-auto-cal;
+				focaltech,ignore-id-check;
+			};
+
+		
+	/* JZZ(zhizhang)@uniscope_drv 20150206 add tp dtsi begin */
+		goodix@5d {
+			compatible = "goodix,gt9xx";
+			reg = <0x5d>;
+			interrupt-parent = <&msm_gpio>; 
+			interrupts = <13 0x2008>;  
+			reset-gpios = <&msm_gpio 12 0x00>;
+			interrupt-gpios = <&msm_gpio 13 0x00>;
+			avdd-supply =<&tp_power>;
+			/*zhangbing@uniscope_drv20151013 TP gt9157 interrupt voltage abnormal(lower than normal) begin*/
+			pinctrl-names = "pmx_ts_active","pmx_ts_suspend";
 			pinctrl-0 = <&ts_int_active &ts_reset_active>;
 			pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
-			pinctrl-2 = <&ts_release>;
-			focaltech,name = "ft6306";
-			focaltech,family-id = <0x06>;
-			focaltech,reset-gpio = <&msm_gpio 12 0x0>;
-			focaltech,irq-gpio = <&msm_gpio 13 0x0>;
-			focaltech,display-coords = <0 0 480 854>;
-			focaltech,panel-coords = <0 0 480 950>;
-			focaltech,button-map= <139 102 158>;
-			focaltech,no-force-update;
-			focaltech,i2c-pull-up;
-			focaltech,group-id = <1>;
-			focaltech,hard-reset-delay-ms = <20>;
-			focaltech,soft-reset-delay-ms = <200>;
-			focaltech,num-max-touches = <2>;
-			focaltech,fw-delay-aa-ms = <30>;
-			focaltech,fw-delay-55-ms = <30>;
-			focaltech,fw-upgrade-id1 = <0x79>;
-			focaltech,fw-upgrade-id2 = <0x08>;
-			focaltech,fw-delay-readid-ms = <10>;
-			focaltech,fw-delay-era-flsh-ms = <2000>;
-			focaltech,fw-auto-cal;
-			focaltech,ignore-id-check;
+			/*zhangbing@uniscope_drv20151013 TP gt9157 interrupt voltage abnormal(lower than normal) end*/
+			goodix,panel-coords = <0 0 480 854>;
+			goodix,display-coords = <0 0 480 854>;
+			goodix,button-map= <158 102 139>;
+			goodix,product-id = "915";
+			goodix,cfg-data0 = [
+				41 E0 01 20 03 0A 05 C1 01 08 
+				28 05 50 32 03 05 00 00 FF 7F 
+				00 00 00 00 00 00 14 88 27 0A 
+				2C 2E B5 06 00 00 01 9B 33 11 
+				3C 01 00 00 00 03 64 32 00 00 
+				CA 1E 5A 94 C5 02 07 00 00 04 
+				A8 21 00 88 29 00 6D 34 00 58 
+				41 00 48 51 00 48 0F 2F 47 00 
+				F7 40 30 FF FF 27 00 00 00 00 
+				00 00 00 00 00 00 00 00 00 00 
+				00 00 00 00 00 00 00 19 00 00 
+				46 00 08 0A 0C 0E 10 12 14 16 
+				18 1A 00 00 00 00 00 00 00 00 
+				00 00 00 00 00 00 00 00 00 00 
+				00 00 28 24 22 20 1F 1E 1D 0C 
+				0A 08 06 05 04 02 00 00 00 00 
+				00 00 00 00 00 00 00 00 00 00 
+				00 FF FF FF FF FF FF FF FF FF 
+				FF FF FF FF B4 01];
+			goodix,cfg-data1 = [
+				41 E0 01 20 03 0A 05 C1 01 08 
+				28 05 50 32 03 05 00 00 FF 7F 
+				00 00 00 00 00 00 14 88 27 0A 
+				2C 2E B5 06 00 00 01 9B 33 11 
+				3C 01 00 00 00 03 64 32 00 00 
+				CA 1E 5A 94 C5 02 07 00 00 04 
+				A8 21 00 88 29 00 6D 34 00 58 
+				41 00 48 51 00 48 0F 2F 47 00 
+				F7 40 30 FF FF 27 00 00 00 00 
+				00 00 00 00 00 00 00 00 00 00 
+				00 00 00 00 00 00 00 19 00 00 
+				46 00 08 0A 0C 0E 10 12 14 16 
+				18 1A 00 00 00 00 00 00 00 00 
+				00 00 00 00 00 00 00 00 00 00 
+				00 00 28 24 22 20 1F 1E 1D 0C 
+				0A 08 06 05 04 02 00 00 00 00 
+				00 00 00 00 00 00 00 00 00 00 
+				00 FF FF FF FF FF FF FF FF FF 
+				FF FF FF FF B4 01];
+			goodix,fw_name = "gtp_fw.bin";
 		};
+	/* JZZ(zhizhang)@uniscope_drv 20150206 add TP dtsi end */		
 	};
 
 	i2c@78b5000 { /* BLSP1 QUP1 */
@@ -192,6 +301,63 @@
 			bosch,gpio-int1 = <&msm_gpio 96 0x2002>;
 			bosch,gpio-int2 = <&msm_gpio 65 0x2002>;
 		};
+
+		/*liguowei@uniscope 20140910 add stk3x1x begin*/
+		stk@48 {
+			compatible = "stk,stk3x1x";
+			reg = <0x48>;
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <94 0x2002>;
+			vdd-supply = <&pm8909_l17>;
+			vio-supply = <&pm8909_l6>;
+			stk,irq-gpio = <&msm_gpio 94 0x2002>;
+			stk,transmittance = <4092>;
+			stk,state-reg = <0x00>;
+			stk,psctrl-reg = <0x31>;
+			stk,alsctrl-reg = <0x39>;
+			stk,ledctrl-reg = <0xBF>;
+			stk,wait-reg = <0x09>;
+			stk,ps-thdh = <100>;
+			stk,ps-thdl = <50>;
+		};
+		//liguowei@uniscope 20140910 add stk3x1x end	
+		/* Added by JZZ(zhizhang)@uniscope_drv for sensor device tree 20150210 begin */
+		akm@d {
+			compatible = "ak,ak09911";
+			reg = <0x0d>;
+			pinctrl-names = "default","sleep";
+			pinctrl-0 = <&akm_default>;
+			pinctrl-1 = <&akm_sleep>;
+			vdd-supply = <&pm8909_l17>;
+			vio-supply = <&pm8909_l6>;
+			akm,layout = <0x5>;
+			akm,gpio_rstn = <&msm_gpio 99 0x0>;
+			akm,auto-report;
+		};
+		//kangyan@uniscope_drv add QMC7983 sensor 20150511
+		qst@2d { /* Magnetic field sensor */
+			compatible = "qst,qmc7983";
+			reg = <0x2d>;
+			pinctrl-names = "default","sleep";
+			pinctrl-0 = <&qmc_default>;
+			pinctrl-1 = <&qmc_sleep>;
+			vdd-supply = <&pm8909_l17>;
+			vio-supply = <&pm8909_l6>;
+			qst,dir = "obverse-x-axis-forward";
+			qst,gpio_rstn = <&msm_gpio 110 0x0>;
+			qst,layout = <0x8>;
+			qst,auto-report;
+			qst,delay_ms = <10>;
+		};
+		mpu3050@68 { /* Gyroscope and accelerometer sensor combo */
+			compatible = "invn,mpu3050";
+			reg = <0x68>;		
+			vdd-supply = <&pm8909_l17>;
+			vlogic-supply = <&pm8909_l6>;
+			invn,gpio-en = <&pm8909_gpios 3 0x2002>;
+			invn,poll-interval = <200>;
+		};
+		/* Added by JZZ(zhizhang)@uniscope_drv for sensor device tree 20150210 end */
 	};
 
 	hall {
@@ -199,13 +365,51 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&hall_sensor_int_default>;
 		interrupt-parent = <&msm_gpio>;
-		interrupts = <36 0x2003>;
+		interrupts = <110 0x2003>;   /* JZZ(zhizhang)@uniscope_drv for keyled use gpio36 20150210 */
 		vddio-supply = <&pm8909_l5>;
-		linux,gpio-int = <&msm_gpio 36 0x1>;
+		linux,gpio-int = <&msm_gpio 110 0x1>;  /* JZZ(zhizhang)@uniscope_drv for keyled use gpio36 20150210 */
 		linux,wakeup;
 		linux,min-uv = <1650000>;
 		linux,max-uv = <3300000>;
 	};
+	
+	/* JZZ(zhizhang)@uniscope_drv 20150317 add keypad led control begin */
+	gpio-leds {
+		compatible = "gpio-leds";
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&gpio_led_off>;
+
+		keypad-backlight {
+			gpios = <&msm_gpio 36 0>;
+			label = "button-backlight";
+			linux,default-trigger = "none";
+			retain-state-suspended;
+		};
+	};
+	/* JZZ(zhizhang)@uniscope_drv 20150317 add keypad led control end */
+
+	//JZZ(zhizhang)@uni_drv 20150410 add nfc pn547 driver begin 
+	i2c@78b6000 { /* BLSP1 QUP2 */
+		nfc@2b {
+			compatible = "nfc,pn544";
+			reg = <0x2b>;
+			qcom,irq-gpio = <&msm_gpio 21 0x00>;
+			qcom,dis-gpio = <&msm_gpio 20 0x00>;
+			qcom,firm_gpio= <&msm_gpio 95 0x00>;
+			qcom,clk-src = "BBCLK2";
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <21 0>;
+			interrupt-names = "nfc_irq";
+			pinctrl-names = "nfc_active","nfc_suspend";
+			pinctrl-0 = <&nfc_int_active &nfc_disable_active>;
+			pinctrl-1 = <&nfc_int_suspend &nfc_disable_suspend>;
+			qcom,clk-gpio = <&pm8909_gpios 2 0>;
+			clocks = <&clock_rpm clk_bb_clk2_pin>;
+			clock-names = "ref_clk";
+		};
+	};
+	//JZZ(zhizhang)@uni_drv 20150410 add nfc pn547 driver end
 
 	sound {
 		compatible = "qcom,msm8x16-audio-codec";
@@ -214,6 +418,8 @@
 		qcom,msm-codec-type = "internal";
 		qcom,msm-ext-pa = "primary";
 		qcom,msm-mclk-freq = <9600000>;
+		//kangyan@uni_drv 20150319 enable spk and micbias
+		qcom,msm-spk-ext-pa = <&msm_gpio 98 0>;
 		qcom,msm-mbhc-hphl-swh = <1>;
 		qcom,msm-mbhc-gnd-swh = <0>;
 		qcom,msm-hs-micbias-type = "internal";
@@ -225,8 +431,10 @@
 			"INT_LDO_H", "MCLK",
 			"MIC BIAS Internal1", "Handset Mic",
 			"MIC BIAS Internal2", "Headset Mic",
+			"MIC BIAS Internal3", "Secondary Mic",
 			"AMIC1", "MIC BIAS Internal1",
-			"AMIC2", "MIC BIAS Internal2";
+			"AMIC2", "MIC BIAS Internal2",
+			"AMIC3", "MIC BIAS Internal3";			
 		pinctrl-names = "cdc_lines_act",
 				"cdc_lines_sus";
 		pinctrl-0 = <&cdc_pdm_lines_act>;
@@ -267,6 +475,8 @@
 };
 
 &spmi_bus {
+	/* JZZ(zhizhang)@uniscope_drv 20150317 add keypad led control begin */
+	/*
 	qcom,pm8909@0 {
 		qcom,leds@a300 {
 			status = "okay";
@@ -284,6 +494,8 @@
 			};
 		};
 	};
+	*/
+	/* JZZ(zhizhang)@uniscope_drv 20150317 add keypad led control end */
 };
 
 &sdc2_cd_on {
@@ -361,11 +573,333 @@
 	qcom,platform-reset-gpio = <&msm_gpio 25 0>;
 };
 
+/* JZZ(zhizhang)@uniscope_drv 20140620 for adjusting otm9605a-qhd lcd begin */
+#include "dsi-panel-otm9605a-qhd-video.dtsi"
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&dsi_otm9605a_qhd_vid {
+	qcom,cont-splash-enabled;
+};
+
+&pmx_mdss {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 25>;
+};
+
+&pmx_mdss_te {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 24>;
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_otm9605a_qhd_vid>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+
+	qcom,platform-reset-gpio = <&msm_gpio 25 0>;
+};
+
+#include "dsi-panel-otm8019a-wvga-video.dtsi"
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&dsi_otm8019a_wvga_video {
+	qcom,cont-splash-enabled;
+};
+
+&pmx_mdss {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 25>;
+};
+
+&pmx_mdss_te {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 24>;
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_otm8019a_wvga_video>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+
+	qcom,platform-reset-gpio = <&msm_gpio 25 0>;
+};
+
+/*zhangbing@uniscope drv 20150624 add L510 LCD OTM8019A FWVGA begin*/
+#include "dsi-panel-otm8019a-fwvga-video.dtsi"
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&dsi_otm8019a_fwvga_video {
+	qcom,cont-splash-enabled;
+};
+
+&pmx_mdss {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 25>;
+};
+
+&pmx_mdss_te {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 24>;
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_otm8019a_fwvga_video>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+
+	qcom,platform-reset-gpio = <&msm_gpio 25 0>;
+};
+/*zhangbing@uniscope drv 20150624 add L510 LCD OTM8019A FWVGA end*/
+
+/*zhangbing@uniscope drv 20150624 add L510 LCD OTM8019A FWVGA 5INCH begin*/
+#include "dsi-panel-otm8019a-fwvga-video-5inch.dtsi"
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&dsi_otm8019a_fwvga_video_5inch {
+	qcom,cont-splash-enabled;
+};
+
+&pmx_mdss {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 25>;
+};
+
+&pmx_mdss_te {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 24>;
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_otm8019a_fwvga_video_5inch>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+
+	qcom,platform-reset-gpio = <&msm_gpio 25 0>;
+};
+/*zhangbing@uniscope drv 20150624 add L510 LCD OTM8019A FWVGA 5INCH end*/
+
+/*zhangbing@uniscope drv 20150624 add L510 LCD OTM1287A 720p begin*/
+#include "dsi-panel-otm1287a-720p-video.dtsi"
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&dsi_otm1287a_720p_video {
+	qcom,cont-splash-enabled;
+};
+
+&pmx_mdss {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 25>;
+};
+
+&pmx_mdss_te {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 24>;
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_otm1287a_720p_video>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+
+	qcom,platform-reset-gpio = <&msm_gpio 25 0>;
+};
+/*zhangbing@uniscope drv 20150624 add L510 LCD OTM1287A 720p end*/
+
+#include "dsi-panel-rm68172-wvga-video.dtsi"
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&dsi_rm68172_wvga_video {
+	qcom,cont-splash-enabled;
+};
+
+&pmx_mdss {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 25>;
+};
+
+&pmx_mdss_te {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 24>;
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_rm68172_wvga_video>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+
+	qcom,platform-reset-gpio = <&msm_gpio 25 0>;
+};
+
+
+#include "dsi-panel-rm68172-wvga-video_ctc.dtsi"
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&dsi_rm68172_wvga_video_ctc {
+	qcom,cont-splash-enabled;
+};
+
+&pmx_mdss {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 25>;
+};
+
+&pmx_mdss_te {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 24>;
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_rm68172_wvga_video_ctc>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+
+	qcom,platform-reset-gpio = <&msm_gpio 25 0>;
+};
+
+#include "dsi-panel-ILI9806E-wvga-video.dtsi"
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&dsi_ili9806e_1080p_video {
+	qcom,cont-splash-enabled;
+};
+
+&pmx_mdss {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 25>;
+};
+
+&pmx_mdss_te {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 24>;
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_ili9806e_1080p_video>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+
+	qcom,platform-reset-gpio = <&msm_gpio 25 0>;
+};
+
+#include "dsi-panel-hx8379-gd_wvga-video.dtsi"
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&dsi_hx8379_gd_wvga_video {
+	qcom,cont-splash-enabled;
+};
+
+&pmx_mdss {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 25>;
+};
+
+&pmx_mdss_te {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 24>;
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_hx8379_gd_wvga_video>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+
+	qcom,platform-reset-gpio = <&msm_gpio 25 0>;
+};
+/* JZZ(zhizhang)@uniscope_drv 20140620 for adjusting otm9605a-qhd lcd end */
+
+/*zhangbing@uniscope_drv 20150619 add L511 LCD ili9806e fwvga begin*/
+#include "dsi-panel-ILI9806E-fwvga-dj-video.dtsi"
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&dsi_ili9806e_fwvga_dj_video {
+	qcom,cont-splash-enabled;
+};
+
+&pmx_mdss {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 25>;
+};
+
+&pmx_mdss_te {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 24>;
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_ili9806e_fwvga_dj_video>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+
+	qcom,platform-reset-gpio = <&msm_gpio 25 0>;
+};
+/*zhangbing@uniscope_drv 20150619 add L511 LCD ili9806e fwvga end*/
+
+/*zhangbing@uniscope_drv 20150906 add L510 LCD nt35521 720p begin*/
+#include "dsi-panel-nt35521-720p-dj-video.dtsi"
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&dsi_nt35521_720p_dj_video {
+	qcom,cont-splash-enabled;
+};
+
+&pmx_mdss {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 25>;
+};
+
+&pmx_mdss_te {
+	qcom,num-grp-pins = <1>;
+	qcom,pins = <&gp 24>;
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_nt35521_720p_dj_video>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+
+	qcom,platform-reset-gpio = <&msm_gpio 25 0>;
+};
+/*zhangbing@uniscope_drv 20150906 add L510 LCD nt35521 720p end*/
+
 &pm8909_vadc {
 	chan@30 {
 		qcom,scale-function = <13>;
 	};
 };
+
 
 &pm8909_adc_tm {
 	chan@30 {
@@ -376,7 +910,7 @@
 &pm8909_chg {
 	qcom,vddmax-mv = <4350>;
 	qcom,vddsafe-mv = <4380>;
-	qcom,vinmin-mv = <4470>;
+	qcom,vinmin-mv = <4390>; /* uni@fantian for charger 20150715 */
 	qcom,batt-hot-percentage = <25>;
 	qcom,batt-cold-percentage = <80>;
 	qcom,tchg-mins = <360>;
@@ -389,7 +923,7 @@
 		qcom,rpull-up-kohm = <0>;
 		qcom,vref-batt-therm = <1800000>;
 
-		#include "batterydata-qrd-skue-4v35-2000mah.dtsi"
+		#include "batterydata-uni-L500D-4v35-2500mah.dtsi"
 	};
 };
 

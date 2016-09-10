@@ -262,4 +262,14 @@ config MSM_BT_POWER
 	  Provides a parameter to switch on/off power from PMIC
 	  to Bluetooth device.
 
+config BT_HCISMD
+        tristate "HCI SMD driver"
+        help
+          Bluetooth HCI SMD driver.
+          This driver is required if you want to use Bluetooth device with
+          SMD interface.
+
+          Say Y here to compile support for Bluetooth SMD devices into the
+          kernel or say M to compile it as a module (hci_smd).
+
 endmenu

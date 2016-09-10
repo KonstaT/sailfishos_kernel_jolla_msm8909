@@ -1,3 +1,4 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -29,20 +30,23 @@
 			interrupts = <0x0 0x8 0x0>,
 				     <0x0 0x8 0x1>;
 			interrupt-names = "kpdpwr", "resin";
-			qcom,pon-dbc-delay = <15625>;
+			/* Increase debounce from 15625 to 31250 to remove
+			   duplicate key presses on bad HW */
+			qcom,pon-dbc-delay = <31250>;
 			qcom,system-reset;
 			qcom,clear-warm-reset;
-
+/*liguowei@uniscope 20140823 support long pressing powerkey 5s to restart system begin*/
 			qcom,pon_1 {
 				qcom,pon-type = <0>;
 				qcom,support-reset = <1>;
 				qcom,pull-up = <1>;
 				qcom,s1-timer = <10256>;
-				qcom,s2-timer = <2000>;
-				qcom,s2-type = <1>;
+				qcom,s2-timer = <100>;
+				qcom,s2-type = <7>;
+
 				linux,code = <116>;
 			};
-
+/*liguowei@uniscope 20140823 support long pressing powerkey 5s to restart system end*/
 			qcom,pon_2 {
 				qcom,pon-type = <1>;
 				qcom,pull-up = <1>;
@@ -178,7 +182,7 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 			qcom,qpnp-rtc-write = <0>;
-			qcom,qpnp-rtc-alarm-pwrup = <0>;
+			qcom,qpnp-rtc-alarm-pwrup = <1>;
 
 			qcom,pm8909_rtc_rw@6000 {
 				reg = <0x6000 0x100>;
@@ -200,21 +204,23 @@
 			compatible = "qcom,qpnp-linear-charger";
 			#address-cells = <1>;
 			#size-cells = <1>;
-
-			qcom,vddmax-mv = <4200>;
-			qcom,vddsafe-mv = <4200>;
-			qcom,vinmin-mv = <4308>;
-			qcom,ibatsafe-ma = <1440>;
-			qcom,thermal-mitigation = <1440 720 630 0>;
-			qcom,cool-bat-decidegc = <100>;
-			qcom,warm-bat-decidegc = <450>;
-			qcom,cool-bat-mv = <4100>;
-			qcom,warm-bat-mv = <4100>;
-			qcom,ibatmax-warm-ma = <360>;
-			qcom,ibatmax-cool-ma = <360>;
+/*liguowei@uni 20150319 modify charger parameter start */
+			qcom,vddmax-mv = <4330>;
+			qcom,vddsafe-mv = <4330>;
+			qcom,vinmin-mv = <4330>;
+			qcom,ibatsafe-ma = <1000>;
+			qcom,thermal-mitigation = <1000 720 630 0>;
+			qcom,cool-bat-decidegc = <000>;//liguowei@uniscope.com 20141024 stop charging when the temp upto 60;
+			qcom,warm-bat-decidegc = <500>;//liguowei@uniscope.com 20141024 stop charging when the temp upto 60;
+			qcom,cool-bat-mv = <4300>;
+			qcom,warm-bat-mv = <4300>;
+			qcom,ibatmax-warm-ma = <450>;//liguowei@uniscope.com 20141104 current limit to 600ma <50-60 degree>;
+			qcom,ibatmax-cool-ma = <450>;//liguowei@uniscope.com 20141104 current limit to 600ma <50-60 degree>;
+/*liguowei@uni 20150319 modify charger parameter end */
 			qcom,batt-hot-percentage = <25>;
 			qcom,batt-cold-percentage = <80>;
 			qcom,tchg-mins = <232>;
+			qcom,resume-soc = <99>;
 			qcom,chg-vadc = <&pm8909_vadc>;
 			qcom,chg-adc_tm = <&pm8909_adc_tm>;
 
@@ -273,7 +279,7 @@
 			status = "disabled";
 
 			qcom,v-cutoff-uv = <3400000>;
-			qcom,max-voltage-uv = <4200000>;
+			qcom,max-voltage-uv = <4350000>; //liguowei@uniscope20150319
 			qcom,r-conn-mohm = <0>;
 			qcom,shutdown-soc-valid-limit = <100>;
 			qcom,low-soc-calculate-soc-threshold = <15>;

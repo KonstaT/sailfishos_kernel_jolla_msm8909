@@ -1,3 +1,4 @@
+#**********uniscope-driver-modify-file-on-qualcomm-platform*****************#
 #
 # Makefile for the touchscreen drivers.
 #

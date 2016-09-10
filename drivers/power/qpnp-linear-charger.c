@@ -1,3 +1,4 @@
+/**********uniscope-driver-modify-file-on-qualcomm-platform*****************/
 /* Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -25,6 +26,18 @@
 #include <linux/bitops.h>
 #include <linux/leds.h>
 #include <linux/debugfs.h>
+
+#define BATTERY_DESIGN_PROP
+#define L500D_BATTERY
+
+/* Battery specific properties */
+#ifdef BATTERY_DESIGN_PROP
+
+#ifdef L500D_BATTERY
+#include "l500d_battery.h"
+#endif /* L500D_BATTERY */
+
+#endif /* BATTERY_DESIGN_PROP */
 
 #define CREATE_MASK(NUM_BITS, POS) \
 	((unsigned char) (((1 << (NUM_BITS)) - 1) << (POS)))
@@ -1266,7 +1279,7 @@ static int get_prop_batt_temp(struct qpnp_lbc_chip *chip)
 
 	return (int)results.physical;
 }
-
+/*liguowei @uniscope 20150319 modify charging current begin*/
 static void qpnp_lbc_set_appropriate_current(struct qpnp_lbc_chip *chip)
 {
 	unsigned int chg_current = chip->usb_psy_ma;
@@ -1275,13 +1288,14 @@ static void qpnp_lbc_set_appropriate_current(struct qpnp_lbc_chip *chip)
 		chg_current = min(chg_current, chip->cfg_cool_bat_chg_ma);
 	if (chip->bat_is_warm && chip->cfg_warm_bat_chg_ma)
 		chg_current = min(chg_current, chip->cfg_warm_bat_chg_ma);
-	if (chip->therm_lvl_sel != 0 && chip->thermal_mitigation)
+	if (chip->therm_lvl_sel >= 0 && chip->thermal_mitigation)
 		chg_current = min(chg_current,
 			chip->thermal_mitigation[chip->therm_lvl_sel]);
 
 	pr_debug("setting charger current %d mA\n", chg_current);
 	qpnp_lbc_ibatmax_set(chip, chg_current);
 }
+/*liguowei @uniscope 20150319 modify charging current end*/
 
 static void qpnp_batt_external_power_changed(struct power_supply *psy)
 {
@@ -1595,10 +1609,18 @@ static int qpnp_batt_power_get_property(struct power_supply *psy,
 		val->intval = get_prop_batt_present(chip);
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
+#ifdef BATTERY_DESIGN_PROP
+		val->intval = BATTERY_VOLTAGE_MAX_DESIGN;
+#else
 		val->intval = chip->cfg_max_voltage_mv * 1000;
+#endif /*BATTERY_DESIGN_PROP*/
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN:
+#ifdef BATTERY_DESIGN_PROP
+		val->intval = BATTERY_VOLTAGE_MIN_DESIGN;
+#else
 		val->intval = chip->cfg_min_voltage_mv * 1000;
+#endif /*BATTERY_DESIGN_PROP*/
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		val->intval = get_prop_battery_voltage_now(chip);
