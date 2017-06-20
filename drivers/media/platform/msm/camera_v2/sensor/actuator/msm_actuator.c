@@ -378,6 +378,12 @@ static int32_t msm_actuator_park_lens(struct msm_actuator_ctrl_t *a_ctrl)
 	uint16_t next_lens_pos = 0;
 	struct msm_camera_i2c_reg_setting reg_setting;
 
+	// msm8909: this case happens and prevents us from parking the lens
+	// if this adjustment is not made.
+	if (a_ctrl->park_lens.max_step == 0) {
+		a_ctrl->park_lens.max_step = a_ctrl->max_code_size;
+	}
+
 	a_ctrl->i2c_tbl_index = 0;
 	if ((a_ctrl->curr_step_pos > a_ctrl->total_steps) ||
 		(!a_ctrl->park_lens.max_step) ||
@@ -868,6 +874,15 @@ static int msm_actuator_close(struct v4l2_subdev *sd,
 	int rc = 0;
 	struct msm_actuator_ctrl_t *a_ctrl =  v4l2_get_subdevdata(sd);
 	CDBG("Enter\n");
+
+	// make sure the lens is parked in case the userspace blobs
+	// don't call the proper ioctls.
+	if (a_ctrl->func_tbl && a_ctrl->func_tbl->actuator_park_lens)
+		rc = a_ctrl->func_tbl->actuator_park_lens(a_ctrl);
+	if (rc < 0) {
+		pr_err("%s: parking lens failed\n", __func__);
+	}
+
 	if (!a_ctrl) {
 		pr_err("failed\n");
 		return -EINVAL;
